@@ -22,8 +22,11 @@ import {
 
 export { determineTrickWinner };
 
-export function checkAutoClaim(players: Player[], trumpSuit: Suit | null): { claimerId: string; remainingTricks: number } | null {
+export function checkAutoClaim(players: Player[], trumpSuit: Suit | null, stock: Card[] = []): { claimerId: string; remainingTricks: number } | null {
   if (!trumpSuit) return null;
+  
+  // Don't auto-claim if there are still cards in the stock (trumps could be hidden there)
+  if (stock.length > 0) return null;
   
   const playerTrumpCounts: Record<string, number> = {};
   let totalTrumps = 0;
@@ -34,8 +37,10 @@ export function checkAutoClaim(players: Player[], trumpSuit: Suit | null): { cla
     totalTrumps += trumpCount;
   }
   
+  // No trumps left in anyone's hands
   if (totalTrumps === 0) return null;
   
+  // Check if any single player holds ALL remaining trumps
   for (const player of players) {
     if (playerTrumpCounts[player.id] === totalTrumps && totalTrumps > 0) {
       const remainingTricks = player.hand.length;

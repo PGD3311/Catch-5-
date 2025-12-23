@@ -288,13 +288,13 @@ export function GameBoard() {
     if (gameState.trickNumber <= 1) return;
     if (displayTrick.length > 0) return;
     
-    const claim = checkAutoClaim(gameState.players, gameState.trumpSuit);
+    const claim = checkAutoClaim(gameState.players, gameState.trumpSuit, gameState.stock);
     if (claim && claim.remainingTricks > 0) {
       const claimer = gameState.players.find(p => p.id === claim.claimerId);
       if (claimer) {
         toast({
           title: "Auto-Claim",
-          description: `${claimer.name} claims remaining tricks with high trumps!`,
+          description: `${claimer.name} claims remaining tricks with all remaining trumps!`,
         });
         
         setTimeout(() => {
@@ -302,7 +302,7 @@ export function GameBoard() {
         }, 1000);
       }
     }
-  }, [gameState.phase, gameState.currentTrick.length, gameState.trickNumber, gameState.players, gameState.trumpSuit, isMultiplayerMode, displayTrick.length, toast]);
+  }, [gameState.phase, gameState.currentTrick.length, gameState.trickNumber, gameState.players, gameState.trumpSuit, gameState.stock, isMultiplayerMode, displayTrick.length, toast]);
 
   const getRotatedIndex = (offset: number) => (mySeatIndex + offset) % 4;
   const humanPlayer = gameState.players[mySeatIndex];
