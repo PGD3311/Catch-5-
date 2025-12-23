@@ -1,0 +1,200 @@
+import random
+
+# --- CONFIGURATION ---
+SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+VALUES = {
+    '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0, 
+    '10': 10, 'J': 1, 'Q': 2, 'K': 3, 'A': 4
+}
+RANK_ORDER = {r: i for i, r in enumerate(RANKS)}
+
+class Card:
+    def __init__(self, rank, suit):
+        self.rank = rank
+        self.suit = suit
+    
+    def __str__(self):
+        return f"{self.rank} of {self.suit}"
+    
+    def __repr__(self):
+        return self.__str__()
+
+def create_deck():
+    return [Card(r, s) for s in SUITS for r in RANKS]
+
+def get_hand_value(card, trump):
+    # Returns the 'game point' value (10, A, K, Q, J)
+    return VALUES[card.rank]
+
+def play_game():
+    print("--- WELCOME TO CATCH 5 (Text Version) ---")
+    players = ["Player 1", "Player 2", "Player 3", "Player 4"]
+    deck = create_deck()
+    random.shuffle(deck)
+    
+    # Deal 6 cards to each player
+    hands = {p: [] for p in players}
+    for _ in range(6):
+        for p in players:
+            hands[p].append(deck.pop())
+
+    # --- BIDDING PHASE ---
+    print("\n--- BIDDING ---")
+    high_bid = 0
+    bidder = None
+    trump_suit = None
+
+    for p in players:
+        print(f"\n{p}'s Hand: {hands[p]}")
+        try:
+            bid = int(input(f"{p}, enter your bid (2-9) or 0 to pass: "))
+        except:
+            bid = 0
+        
+        if bid > high_bid:
+            high_bid = bid
+            bidder = p
+    
+    if high_bid == 0:
+        print("Everyone passed. Redealing... (Simulated)")
+        return
+
+    print(f"\nWINNING BID: {bidder} with {high_bid}")
+    
+    # Bidder sets trump
+    print(f"{bidder}, please set the Trump suit.")
+    print("0: Hearts, 1: Diamonds, 2: Clubs, 3: Spades")
+    try:
+        suit_idx = int(input("Enter number: "))
+        trump_suit = SUITS[suit_idx]
+    except:
+        trump_suit = SUITS[0] # Default to Hearts if error
+    
+    print(f"*** TRUMP IS {trump_suit} ***")
+
+    # --- PLAYING TRICKS (Simplified for 1 Trick Example) ---
+    # In a real game, this loops 6 times. We will simulate the scoring logic.
+    tricks_won = {p: [] for p in players}
+    
+    # Simulate 6 tricks
+    current_lead_idx = players.index(bidder)
+    
+    for trick_num in range(1, 7):
+        print(f"\n--- TRICK {trick_num} ---")
+        played_cards = []
+        
+        # Determine play order based on who won last trick
+        play_order = players[current_lead_idx:] + players[:current_lead_idx]
+        
+        for p in play_order:
+            print(f"{p}'s Hand: {[str(i)+': '+str(c) for i, c in enumerate(hands[p])]}")
+            try:
+                card_idx = int(input(f"{p}, choose card index (0-{len(hands[p])-1}): "))
+                card = hands[p].pop(card_idx)
+            except:
+                card = hands[p].pop(0) # Auto-play first card if error
+            
+            print(f"> {p} played {card}")
+            played_cards.append((p, card))
+
+        # Determine Winner
+        winning_card = played_cards[0][1]
+        winner = played_cards[0][0]
+        
+        for p, card in played_cards[1:]:
+            # If card is trump and current winner is not, or card is higher trump
+            if card.suit == trump_suit:
+                if winning_card.suit != trump_suit:
+                    winning_card = card
+                    winner = p
+                elif RANK_ORDER[card.rank] > RANK_ORDER[winning_card.rank]:
+                    winning_card = card
+                    winner = p
+            # If neither is trump, strictly follow suit led
+            elif card.suit == played_cards[0][1].suit and winning_card.suit != trump_suit:
+                 if RANK_ORDER[card.rank] > RANK_ORDER[winning_card.rank]:
+                    winning_card = card
+                    winner = p
+        
+        print(f"{winner} wins the trick!")
+        current_lead_idx = players.index(winner)
+        for _, c in played_cards:
+            tricks_won[winner].append(c)
+
+    # --- SCORING (CATCH 5 LOGIC) ---
+    print("\n--- SCORING ---")
+    scores = {p: 0 for p in players}
+    
+    # 1. HIGH (Highest Trump played)
+    # 2. LOW (Lowest Trump played - goes to winner of trick in this version)
+    # 3. JACK (Jack of Trump - goes to winner of trick)
+    # 4. GAME (Sum of face value points)
+    # 5. FIVE (5 of Trump - 5 Points!)
+
+    all_trumps_played = []
+    game_points = {p: 0 for p in players}
+    
+    for p in players:
+        for card in tricks_won[p]:
+            if card.suit == trump_suit:
+                all_trumps_played.append((p, card))
+                # Check for Catch 5
+                if card.rank == '5':
+                    print(f"** {p} CAUGHT THE 5! (+5 Points) **")
+                    scores[p] += 5
+                # Check for Jack
+                if card.rank == 'J':
+                    print(f"** {p} WON THE JACK! (+1 Point) **")
+                    scores[p] += 1
+            
+            # Add to Game Points
+            game_points[p] += get_hand_value(card, trump_suit)
+
+    # Calculate High/Low
+    if all_trumps_played:
+        # Sort by rank index
+        all_trumps_played.sort(key=lambda x: RANK_ORDER[x[1].rank])
+        
+        low_winner = all_trumps_played[0][0] # Lowest rank
+        high_winner = all_trumps_played[-1][0] # Highest rank
+        
+        print(f"{high_winner} won HIGH (+1 Point)")
+        scores[high_winner] += 1
+        
+        print(f"{low_winner} won LOW (+1 Point)")
+        scores[low_winner] += 1
+    
+    # Calculate Game Point (Max Game Points)
+    max_gp = -1
+    game_winner = None
+    # Check for ties or max
+    for p, pts in game_points.items():
+        if pts > max_gp:
+            max_gp = pts
+            game_winner = p
+        elif pts == max_gp:
+            game_winner = None # Tie for game = no point
+            
+    if game_winner:
+        print(f"{game_winner} won GAME with {max_gp} points (+1 Point)")
+        scores[game_winner] += 1
+    else:
+        print("Tie for GAME point (no point awarded).")
+
+    # --- FINAL RESULT ---
+    print("\nFINAL SCORES FOR THIS HAND:")
+    for p in players:
+        print(f"{p}: {scores[p]}")
+        
+    bidder_score = scores[bidder]
+    if bidder_score < high_bid:
+        print(f"\nXXX BIDDER ({bidder}) WENT SET! XXX")
+        print(f"Bid: {high_bid}, Got: {bidder_score}")
+        print(f"Result: -{high_bid} points")
+    else:
+        print(f"\nBIDDER MADE IT!")
+
+# Run the game
+if __name__ == "__main__":
+    play_game()
