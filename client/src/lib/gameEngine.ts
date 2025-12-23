@@ -48,7 +48,7 @@ export function checkAutoClaim(players: Player[], trumpSuit: Suit | null): { cla
   return null;
 }
 
-export function initializeGame(deckColor: DeckColor = 'blue', targetScore: number = DEFAULT_TARGET_SCORE): GameState {
+export function initializeGame(deckColor: DeckColor = 'orange', targetScore: number = DEFAULT_TARGET_SCORE): GameState {
   const players: Player[] = [
     { id: 'player1', name: 'You', isHuman: true, hand: [], teamId: 'team1', bid: null, tricksWon: [] },
     { id: 'player2', name: 'CPU 1', isHuman: false, hand: [], teamId: 'team2', bid: null, tricksWon: [] },

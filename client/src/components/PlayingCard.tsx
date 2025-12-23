@@ -38,7 +38,7 @@ const getSuitColor = (suit: Card['suit']): string => {
 export function PlayingCard({
   card,
   faceDown = false,
-  deckColor = 'blue',
+  deckColor = 'orange',
   onClick,
   disabled = false,
   selected = false,
@@ -168,6 +168,6 @@ export function PlayingCard({
   );
 }
 
-export function CardBack({ deckColor = 'blue', small = false, className }: { deckColor?: DeckColor; small?: boolean; className?: string }) {
+export function CardBack({ deckColor = 'orange', small = false, className }: { deckColor?: DeckColor; small?: boolean; className?: string }) {
   return <PlayingCard faceDown deckColor={deckColor} small={small} className={className} />;
 }

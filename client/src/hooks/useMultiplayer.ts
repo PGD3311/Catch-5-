@@ -143,7 +143,7 @@ export function useMultiplayer() {
     };
   }, [connect]);
 
-  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'blue', targetScore: number = 31) => {
+  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'orange', targetScore: number = 31) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'create_room',
