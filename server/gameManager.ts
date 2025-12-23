@@ -253,9 +253,10 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room || !room.gameState) return;
 
-  if (room.gameState.currentPlayerIndex !== player.seatIndex && 
-      room.gameState.phase !== 'dealer-draw' && 
-      room.gameState.phase !== 'purge-draw') {
+  const phase = room.gameState.phase;
+  const isAnyPlayerPhase = phase === 'dealer-draw' || phase === 'purge-draw' || phase === 'scoring' || phase === 'game-over';
+  
+  if (room.gameState.currentPlayerIndex !== player.seatIndex && !isAnyPlayerPhase) {
     ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
     return;
   }
@@ -277,6 +278,13 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
       break;
     case 'play_card':
       newState = gameEngine.playCard(newState, data.card);
+      break;
+    case 'continue':
+      if (gameEngine.checkGameOver(newState)) {
+        newState = gameEngine.initializeGame(room.deckColor, room.targetScore);
+      } else {
+        newState = gameEngine.startNewRound(newState);
+      }
       break;
   }
 

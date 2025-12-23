@@ -80,17 +80,25 @@ export function GameBoard() {
   }, [darkMode]);
 
   const handleStartGame = useCallback(() => {
-    setGameState(prev => startDealerDraw(prev));
-    setShowDealerDraw(true);
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.startGame();
+    } else {
+      setGameState(prev => startDealerDraw(prev));
+      setShowDealerDraw(true);
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handleDealerDrawComplete = useCallback(() => {
-    setShowDealerDraw(false);
-    setGameState(prev => {
-      const withDealer = finalizeDealerDraw(prev);
-      return dealCards(withDealer);
-    });
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.sendAction('finalize_dealer_draw', {});
+    } else {
+      setShowDealerDraw(false);
+      setGameState(prev => {
+        const withDealer = finalizeDealerDraw(prev);
+        return dealCards(withDealer);
+      });
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handleBid = useCallback((bid: number) => {
     if (isMultiplayerMode) {
@@ -114,9 +122,11 @@ export function GameBoard() {
   }, [isMultiplayerMode, multiplayer]);
 
   const handlePurgeDrawComplete = useCallback(() => {
-    setShowPurgeDraw(false);
-    setGameState(prev => performPurgeAndDraw(prev));
-  }, []);
+    if (!isMultiplayerMode) {
+      setShowPurgeDraw(false);
+      setGameState(prev => performPurgeAndDraw(prev));
+    }
+  }, [isMultiplayerMode]);
 
   const handleCardPlay = useCallback((card: CardType) => {
     if (isMultiplayerMode) {
@@ -133,13 +143,17 @@ export function GameBoard() {
   }, [isMultiplayerMode, multiplayer]);
 
   const handleContinue = useCallback(() => {
-    setGameState(prev => {
-      if (checkGameOver(prev)) {
-        return initializeGame(prev.deckColor, prev.targetScore);
-      }
-      return startNewRound(prev);
-    });
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.sendAction('continue', {});
+    } else {
+      setGameState(prev => {
+        if (checkGameOver(prev)) {
+          return initializeGame(prev.deckColor, prev.targetScore);
+        }
+        return startNewRound(prev);
+      });
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handleNewGame = useCallback(() => {
     setGameState(prev => initializeGame(prev.deckColor, prev.targetScore));
@@ -147,6 +161,7 @@ export function GameBoard() {
   }, []);
 
   useEffect(() => {
+    if (isMultiplayerMode) return;
     if (gameState.phase === 'bidding') {
       const currentPlayer = gameState.players[gameState.currentPlayerIndex];
       if (!currentPlayer.isHuman) {
@@ -160,9 +175,10 @@ export function GameBoard() {
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.highBid, gameState.dealerIndex]);
+  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.highBid, gameState.dealerIndex, isMultiplayerMode]);
 
   useEffect(() => {
+    if (isMultiplayerMode) return;
     if (gameState.phase === 'trump-selection') {
       const bidder = gameState.players.find(p => p.id === gameState.bidderId);
       if (bidder && !bidder.isHuman) {
@@ -180,9 +196,10 @@ export function GameBoard() {
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.phase, gameState.players, gameState.bidderId]);
+  }, [gameState.phase, gameState.players, gameState.bidderId, isMultiplayerMode, handleTrumpSelect]);
 
   useEffect(() => {
+    if (isMultiplayerMode) return;
     if (gameState.phase === 'playing') {
       const currentPlayer = gameState.players[gameState.currentPlayerIndex];
       if (!currentPlayer.isHuman && currentPlayer.hand.length > 0) {
@@ -197,7 +214,7 @@ export function GameBoard() {
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit]);
+  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit, isMultiplayerMode]);
 
   const getRotatedIndex = (offset: number) => (mySeatIndex + offset) % 4;
   const humanPlayer = gameState.players[mySeatIndex];
@@ -375,7 +392,7 @@ export function GameBoard() {
       />
 
       <PurgeDrawModal
-        open={showPurgeDraw}
+        open={isMultiplayerMode ? false : showPurgeDraw}
         players={gameState.players}
         trumpSuit={gameState.trumpSuit || 'Hearts'}
         onComplete={handlePurgeDrawComplete}
@@ -419,7 +436,7 @@ export function GameBoard() {
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
 
       <DealerDrawModal
-        open={showDealerDraw}
+        open={isMultiplayerMode ? gameState.phase === 'dealer-draw' : showDealerDraw}
         players={gameState.players}
         dealerDrawCards={gameState.dealerDrawCards || []}
         onComplete={handleDealerDrawComplete}
