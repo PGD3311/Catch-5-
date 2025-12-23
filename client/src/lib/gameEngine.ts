@@ -22,6 +22,52 @@ import {
 
 export { determineTrickWinner };
 
+export function checkAutoClaim(players: Player[], trumpSuit: Suit | null): { claimerId: string; remainingTricks: number } | null {
+  if (!trumpSuit) return null;
+  
+  const allRemainingTrumps: { playerId: string; rank: number }[] = [];
+  
+  for (const player of players) {
+    for (const card of player.hand) {
+      if (card.suit === trumpSuit) {
+        allRemainingTrumps.push({ playerId: player.id, rank: RANK_ORDER[card.rank] });
+      }
+    }
+  }
+  
+  if (allRemainingTrumps.length === 0) return null;
+  
+  allRemainingTrumps.sort((a, b) => b.rank - a.rank);
+  
+  const topPlayerId = allRemainingTrumps[0].playerId;
+  const playerHasAllTop = allRemainingTrumps.every(t => t.playerId === topPlayerId) ||
+    allRemainingTrumps.filter(t => t.playerId === topPlayerId)
+      .every((t, idx) => t.rank === allRemainingTrumps[idx].rank);
+  
+  if (!playerHasAllTop) {
+    const playerTrumps = allRemainingTrumps.filter(t => t.playerId === topPlayerId);
+    const otherTrumps = allRemainingTrumps.filter(t => t.playerId !== topPlayerId);
+    
+    if (otherTrumps.length === 0) {
+      const remainingTricks = players[0].hand.length;
+      return { claimerId: topPlayerId, remainingTricks };
+    }
+    
+    const highestOtherTrump = Math.max(...otherTrumps.map(t => t.rank));
+    const allPlayerTrumpsHigher = playerTrumps.every(t => t.rank > highestOtherTrump);
+    
+    if (allPlayerTrumpsHigher && playerTrumps.length >= otherTrumps.length) {
+      const remainingTricks = players[0].hand.length;
+      return { claimerId: topPlayerId, remainingTricks };
+    }
+    
+    return null;
+  }
+  
+  const remainingTricks = players[0].hand.length;
+  return { claimerId: topPlayerId, remainingTricks };
+}
+
 export function initializeGame(deckColor: DeckColor = 'blue', targetScore: number = DEFAULT_TARGET_SCORE): GameState {
   const players: Player[] = [
     { id: 'player1', name: 'You', isHuman: true, hand: [], teamId: 'team1', bid: null, tricksWon: [] },
@@ -559,6 +605,50 @@ export function startNewRound(state: GameState): GameState {
 
 export function checkGameOver(state: GameState): boolean {
   return state.teams.some(t => t.score >= state.targetScore);
+}
+
+export function applyAutoClaim(state: GameState, claimerId: string): GameState {
+  const newPlayers = state.players.map(player => {
+    if (player.id === claimerId) {
+      const allRemainingCards = state.players.flatMap(p => p.hand);
+      return {
+        ...player,
+        hand: [],
+        tricksWon: [...player.tricksWon, ...allRemainingCards],
+      };
+    }
+    return { ...player, hand: [] };
+  });
+
+  const scoreDetails = calculateRoundScores(newPlayers, state.teams, state.trumpSuit!);
+  const bidderTeamId = newPlayers.find(p => p.id === state.bidderId)?.teamId;
+  
+  const newTeams = state.teams.map(team => {
+    let pointsToAdd = scoreDetails.teamPoints[team.id];
+    
+    if (team.id === bidderTeamId && pointsToAdd < state.highBid) {
+      pointsToAdd = -state.highBid;
+    }
+    
+    return {
+      ...team,
+      score: team.score + pointsToAdd,
+    };
+  });
+
+  const gameOver = newTeams.some(t => t.score >= state.targetScore);
+
+  return {
+    ...state,
+    players: newPlayers,
+    teams: newTeams,
+    currentTrick: [],
+    trickNumber: TOTAL_TRICKS + 1,
+    phase: gameOver ? 'game-over' : 'scoring',
+    roundScores: scoreDetails.teamPoints,
+    roundScoreDetails: scoreDetails,
+    autoClaimerId: claimerId,
+  };
 }
 
 export function getWinningTeam(state: GameState): Team | null {

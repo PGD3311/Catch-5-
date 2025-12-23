@@ -34,6 +34,8 @@ import {
   startDealerDraw,
   finalizeDealerDraw,
   determineTrickWinner,
+  checkAutoClaim,
+  applyAutoClaim,
 } from '@/lib/gameEngine';
 
 export function GameBoard() {
@@ -278,6 +280,29 @@ export function GameBoard() {
       }
     }
   }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit, isMultiplayerMode, displayTrick.length]);
+
+  useEffect(() => {
+    if (isMultiplayerMode) return;
+    if (gameState.phase !== 'playing') return;
+    if (gameState.currentTrick.length !== 0) return;
+    if (gameState.trickNumber <= 1) return;
+    if (displayTrick.length > 0) return;
+    
+    const claim = checkAutoClaim(gameState.players, gameState.trumpSuit);
+    if (claim && claim.remainingTricks > 0) {
+      const claimer = gameState.players.find(p => p.id === claim.claimerId);
+      if (claimer) {
+        toast({
+          title: "Auto-Claim",
+          description: `${claimer.name} claims remaining tricks with high trumps!`,
+        });
+        
+        setTimeout(() => {
+          setGameState(prev => applyAutoClaim(prev, claim.claimerId));
+        }, 1000);
+      }
+    }
+  }, [gameState.phase, gameState.currentTrick.length, gameState.trickNumber, gameState.players, gameState.trumpSuit, isMultiplayerMode, displayTrick.length, toast]);
 
   const getRotatedIndex = (offset: number) => (mySeatIndex + offset) % 4;
   const humanPlayer = gameState.players[mySeatIndex];

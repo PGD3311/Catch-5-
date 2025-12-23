@@ -57,6 +57,7 @@ export interface GameState {
   discardPile: Card[];
   targetScore: number;
   dealerDrawCards?: DealerDrawCard[];
+  autoClaimerId?: string | null;
 }
 
 export type DeckColor = 'red' | 'blue' | 'green' | 'purple' | 'gold' | 'black' | 'teal' | 'rose' | 'orange' | 'indigo' | 'crimson' | 'navy';
