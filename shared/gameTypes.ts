@@ -71,6 +71,11 @@ export const RANK_ORDER: Record<Rank, number> = {
   '10': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12
 };
 
+export const RANK_ORDER_ACE_LOW: Record<Rank, number> = {
+  'A': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7,
+  '9': 8, '10': 9, 'J': 10, 'Q': 11, 'K': 12
+};
+
 export const DECK_COLORS: { value: DeckColor; label: string; gradient: string }[] = [
   { value: 'red', label: 'Classic Red', gradient: 'from-red-700 to-red-900' },
   { value: 'blue', label: 'Royal Blue', gradient: 'from-blue-600 to-blue-900' },

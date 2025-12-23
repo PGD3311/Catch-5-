@@ -11,6 +11,7 @@ import {
   determineTrickWinner,
   calculateRoundScores,
   RANK_ORDER,
+  RANK_ORDER_ACE_LOW,
   MIN_BID,
   MAX_BID,
   INITIAL_HAND_SIZE,
@@ -73,10 +74,10 @@ export function finalizeDealerDraw(state: GameState): GameState {
   }
 
   let lowestIndex = 0;
-  let lowestRank = RANK_ORDER[state.dealerDrawCards[0].card.rank];
+  let lowestRank = RANK_ORDER_ACE_LOW[state.dealerDrawCards[0].card.rank];
 
   for (let i = 1; i < state.dealerDrawCards.length; i++) {
-    const cardRank = RANK_ORDER[state.dealerDrawCards[i].card.rank];
+    const cardRank = RANK_ORDER_ACE_LOW[state.dealerDrawCards[i].card.rank];
     if (cardRank < lowestRank) {
       lowestRank = cardRank;
       lowestIndex = i;
