@@ -56,7 +56,8 @@ export function BiddingPanel({ open, highBid, playerName, isDealer, allOthersPas
 
       <div className="flex items-center gap-2 flex-wrap justify-center">
         {bidOptions.map((bid, index) => {
-          const isValid = bid > highBid;
+          const canDealerTakeNine = isDealer && highBid === MAX_BID && bid === MAX_BID;
+          const isValid = bid > highBid || canDealerTakeNine;
           return (
             <motion.div
               key={bid}
@@ -71,6 +72,7 @@ export function BiddingPanel({ open, highBid, playerName, isDealer, allOthersPas
                 className={cn(
                   'h-11 w-11 text-lg font-bold rounded-lg',
                   isValid && 'bg-emerald-600 hover:bg-emerald-500 text-white',
+                  canDealerTakeNine && 'ring-2 ring-amber-400',
                   !isValid && 'opacity-30'
                 )}
                 data-testid={`button-bid-${bid}`}

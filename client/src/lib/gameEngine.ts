@@ -139,7 +139,6 @@ export function getCpuBid(hand: Card[], highBid: number, isDealer: boolean, allP
     return MIN_BID;
   }
 
-  let trumpPotential = 0;
   const suitCounts: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
   const suitStrength: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
 
@@ -156,17 +155,25 @@ export function getCpuBid(hand: Card[], highBid: number, isDealer: boolean, allP
     }
   }
 
-  let bestSuit: Suit = 'Hearts';
   let bestScore = 0;
   for (const suit of Object.keys(suitCounts) as Suit[]) {
     const score = suitCounts[suit] * 2 + suitStrength[suit];
     if (score > bestScore) {
       bestScore = score;
-      bestSuit = suit;
     }
   }
 
-  trumpPotential = Math.min(MAX_BID, Math.max(MIN_BID, Math.floor(bestScore / 2)));
+  const trumpPotential = Math.min(MAX_BID, Math.max(MIN_BID, Math.floor(bestScore / 2)));
+
+  if (isDealer) {
+    if (highBid === MAX_BID && trumpPotential >= highBid) {
+      return MAX_BID;
+    }
+    if (trumpPotential > highBid) {
+      return highBid + 1;
+    }
+    return 0;
+  }
 
   if (trumpPotential > highBid && Math.random() > 0.3) {
     return trumpPotential;
@@ -299,6 +306,7 @@ export function getCpuCardToPlay(
 
 export function processBid(state: GameState, bid: number): GameState {
   const newPlayers = [...state.players];
+  const isDealer = state.currentPlayerIndex === state.dealerIndex;
   newPlayers[state.currentPlayerIndex] = {
     ...newPlayers[state.currentPlayerIndex],
     bid,
@@ -309,6 +317,8 @@ export function processBid(state: GameState, bid: number): GameState {
 
   if (bid > state.highBid) {
     newHighBid = bid;
+    newBidderId = newPlayers[state.currentPlayerIndex].id;
+  } else if (isDealer && bid === MAX_BID && state.highBid === MAX_BID) {
     newBidderId = newPlayers[state.currentPlayerIndex].id;
   }
 
