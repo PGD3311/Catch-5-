@@ -47,7 +47,7 @@ export function CardDock({ cards, onCardClick, canPlayCard, isCurrentPlayer, tru
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
       >
-        <div className="flex items-end justify-center gap-1 px-16 py-2 min-w-min">
+        <div className="flex items-end justify-start gap-0.5 px-4 py-2">
           <AnimatePresence mode="popLayout">
             {cards.map((card, index) => (
               <DockCard
@@ -93,9 +93,9 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
     return Math.abs(val - cardCenterX);
   });
 
-  const baseWidth = 52;
-  const maxWidth = 72;
-  const magnificationRange = 100;
+  const baseWidth = 36;
+  const maxWidth = 48;
+  const magnificationRange = 60;
   
   const widthSync = useTransform(distance, [0, magnificationRange], [maxWidth, baseWidth]);
   const width = useSpring(widthSync, { stiffness: 400, damping: 30, mass: 0.5 });
