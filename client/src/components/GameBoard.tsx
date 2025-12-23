@@ -9,6 +9,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { RulesModal } from './RulesModal';
 import { ShareModal } from './ShareModal';
 import { PurgeDrawModal } from './PurgeDrawModal';
+import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useCallback } from 'react';
@@ -24,6 +25,8 @@ import {
   startNewRound,
   checkGameOver,
   performPurgeAndDraw,
+  startDealerDraw,
+  finalizeDealerDraw,
 } from '@/lib/gameEngine';
 
 export function GameBoard() {
@@ -32,6 +35,7 @@ export function GameBoard() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [showPurgeDraw, setShowPurgeDraw] = useState(false);
+  const [showDealerDraw, setShowDealerDraw] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true';
@@ -58,7 +62,16 @@ export function GameBoard() {
   }, [darkMode]);
 
   const handleStartGame = useCallback(() => {
-    setGameState(prev => dealCards(prev));
+    setGameState(prev => startDealerDraw(prev));
+    setShowDealerDraw(true);
+  }, []);
+
+  const handleDealerDrawComplete = useCallback(() => {
+    setShowDealerDraw(false);
+    setGameState(prev => {
+      const withDealer = finalizeDealerDraw(prev);
+      return dealCards(withDealer);
+    });
   }, []);
 
   const handleBid = useCallback((bid: number) => {
@@ -327,6 +340,14 @@ export function GameBoard() {
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
 
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+
+      <DealerDrawModal
+        open={showDealerDraw}
+        players={gameState.players}
+        dealerDrawCards={gameState.dealerDrawCards || []}
+        onComplete={handleDealerDrawComplete}
+        deckColor={gameState.deckColor}
+      />
     </div>
   );
 }

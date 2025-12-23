@@ -5,6 +5,7 @@ import {
   GameState,
   Suit,
   DeckColor,
+  DealerDrawCard,
   createDeck,
   shuffleDeck,
   determineTrickWinner,
@@ -48,6 +49,44 @@ export function initializeGame(deckColor: DeckColor = 'blue', targetScore: numbe
     stock: [],
     discardPile: [],
     targetScore,
+    dealerDrawCards: [],
+  };
+}
+
+export function startDealerDraw(state: GameState): GameState {
+  const deck = shuffleDeck(createDeck());
+  const dealerDrawCards: DealerDrawCard[] = state.players.map((player, index) => ({
+    playerId: player.id,
+    card: deck[index],
+  }));
+
+  return {
+    ...state,
+    phase: 'dealer-draw',
+    dealerDrawCards,
+  };
+}
+
+export function finalizeDealerDraw(state: GameState): GameState {
+  if (!state.dealerDrawCards || state.dealerDrawCards.length === 0) {
+    return { ...state, phase: 'setup', dealerIndex: 0 };
+  }
+
+  let lowestIndex = 0;
+  let lowestRank = RANK_ORDER[state.dealerDrawCards[0].card.rank];
+
+  for (let i = 1; i < state.dealerDrawCards.length; i++) {
+    const cardRank = RANK_ORDER[state.dealerDrawCards[i].card.rank];
+    if (cardRank < lowestRank) {
+      lowestRank = cardRank;
+      lowestIndex = i;
+    }
+  }
+
+  return {
+    ...state,
+    dealerIndex: lowestIndex,
+    dealerDrawCards: state.dealerDrawCards,
   };
 }
 
