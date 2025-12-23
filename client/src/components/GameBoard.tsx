@@ -343,15 +343,7 @@ export function GameBoard() {
               </h1>
               <p className="text-sm uppercase tracking-widest text-muted-foreground">Grab a pahtnah </p>
             </div>
-            <div className="max-w-sm mx-auto space-y-3">
-              <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-                <span>2v2 Teams</span>
-                <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                <span>Bid 5-9</span>
-                <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                <span>Trump Suits</span>
-              </div>
-            </div>
+            
           </div>
           {!showMultiplayerLobby ? (
             <>
