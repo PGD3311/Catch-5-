@@ -258,13 +258,14 @@ export function PlayerArea({
               )}
             </div>
             {onSortHand && (
-              <button
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={onSortHand}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 data-testid="button-sort-hand"
               >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-              </button>
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
             )}
           </div>
           {showCards && renderBottomCards()}
