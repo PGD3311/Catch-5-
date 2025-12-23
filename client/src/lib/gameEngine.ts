@@ -215,6 +215,22 @@ export function getCpuCardToPlay(
     return allPlayers[teammateIndex]?.id;
   };
   
+  const getPlayersAfterMe = (): string[] => {
+    if (!cpuPlayerId || !allPlayers) return [];
+    const myIndex = allPlayers.findIndex(p => p.id === cpuPlayerId);
+    if (myIndex === -1) return [];
+    const playedIds = currentTrick.map(tc => tc.playerId);
+    const result: string[] = [];
+    for (let i = 1; i <= 3; i++) {
+      const idx = (myIndex + i) % 4;
+      const pid = allPlayers[idx]?.id;
+      if (pid && !playedIds.includes(pid)) {
+        result.push(pid);
+      }
+    }
+    return result;
+  };
+  
   const getCurrentWinner = (): { playerId: string; card: Card } | null => {
     if (currentTrick.length === 0) return null;
     const leadSuit = currentTrick[0].card.suit;
@@ -253,6 +269,8 @@ export function getCpuCardToPlay(
   const currentWinner = getCurrentWinner();
   const teammateIsWinning = currentWinner && currentWinner.playerId === teammateId;
   const teammateHasFive = fiveInTrick && fiveInTrick.playerId === teammateId;
+  const playersAfterMe = getPlayersAfterMe();
+  const opponentsAfterMe = playersAfterMe.filter(pid => pid !== teammateId);
 
   if (fiveInTrick && !teammateHasFive) {
     if (followCards.length > 0 && leadSuit === trumpSuit) {
@@ -292,6 +310,26 @@ export function getCpuCardToPlay(
   }
 
   if (trumpCards.length > 0) {
+    const shouldProtect = 
+      !hasFiveOfTrump && 
+      !fiveInTrick && 
+      leadSuit !== trumpSuit && 
+      opponentsAfterMe.length > 0 && 
+      !teammateIsWinning;
+    
+    if (shouldProtect) {
+      const protectiveTrumps = trumpCards.filter(c => RANK_ORDER[c.rank] > RANK_ORDER['5']);
+      const highestTrickTrump = currentTrick
+        .filter(tc => tc.card.suit === trumpSuit)
+        .reduce((max, tc) => Math.max(max, RANK_ORDER[tc.card.rank]), -1);
+      
+      const winningProtectiveTrumps = protectiveTrumps.filter(c => RANK_ORDER[c.rank] > highestTrickTrump);
+      
+      if (winningProtectiveTrumps.length > 0) {
+        return winningProtectiveTrumps.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
+      }
+    }
+    
     if (hasFiveOfTrump) {
       const safeTrumps = trumpCards.filter(c => c.rank !== '5');
       if (safeTrumps.length > 0) {
