@@ -100,7 +100,7 @@ export const MAX_BID = 9;
 export const INITIAL_HAND_SIZE = 9;
 export const FINAL_HAND_SIZE = 6;
 export const TOTAL_TRICKS = 6;
-export const DEFAULT_TARGET_SCORE = 31;
+export const DEFAULT_TARGET_SCORE = 25;
 export const TOTAL_POINTS_PER_ROUND = 9;
 
 export function createDeck(): Card[] {
