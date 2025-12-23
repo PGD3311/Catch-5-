@@ -404,20 +404,22 @@ export function GameBoard() {
             />
           </div>
 
-          <div className="flex-1 flex items-center justify-between gap-1 sm:gap-4">
-            <PlayerArea
-              player={opponent1}
-              team={getTeamForPlayer(opponent1)}
-              isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(1)}
-              isBidder={gameState.bidderId === opponent1.id}
-              isDealer={gameState.dealerIndex === getRotatedIndex(1)}
-              deckColor={gameState.deckColor}
-              position="left"
-              showBidResult={showBidResults}
-              trumpSuit={gameState.trumpSuit}
-            />
+          <div className="flex-1 flex items-center justify-center gap-1 sm:gap-4">
+            <div className="w-24 sm:w-auto shrink-0">
+              <PlayerArea
+                player={opponent1}
+                team={getTeamForPlayer(opponent1)}
+                isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(1)}
+                isBidder={gameState.bidderId === opponent1.id}
+                isDealer={gameState.dealerIndex === getRotatedIndex(1)}
+                deckColor={gameState.deckColor}
+                position="left"
+                showBidResult={showBidResults}
+                trumpSuit={gameState.trumpSuit}
+              />
+            </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-4 max-w-md">
               <TrickArea 
                 currentTrick={displayTrick.length > 0 ? displayTrick : gameState.currentTrick} 
                 players={gameState.players} 
@@ -444,17 +446,19 @@ export function GameBoard() {
               </div>
             </div>
 
-            <PlayerArea
-              player={opponent2}
-              team={getTeamForPlayer(opponent2)}
-              isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(3)}
-              isBidder={gameState.bidderId === opponent2.id}
-              isDealer={gameState.dealerIndex === getRotatedIndex(3)}
-              deckColor={gameState.deckColor}
-              position="right"
-              showBidResult={showBidResults}
-              trumpSuit={gameState.trumpSuit}
-            />
+            <div className="w-24 sm:w-auto shrink-0">
+              <PlayerArea
+                player={opponent2}
+                team={getTeamForPlayer(opponent2)}
+                isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(3)}
+                isBidder={gameState.bidderId === opponent2.id}
+                isDealer={gameState.dealerIndex === getRotatedIndex(3)}
+                deckColor={gameState.deckColor}
+                position="right"
+                showBidResult={showBidResults}
+                trumpSuit={gameState.trumpSuit}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-2 sm:gap-3">
