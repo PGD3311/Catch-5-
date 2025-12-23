@@ -399,6 +399,7 @@ export function GameBoard() {
         teams={gameState.teams}
         players={gameState.players}
         roundScores={gameState.roundScores}
+        roundScoreDetails={gameState.roundScoreDetails}
         bidderId={gameState.bidderId}
         highBid={gameState.highBid}
         onContinue={handleContinue}

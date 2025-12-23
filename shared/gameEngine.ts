@@ -366,6 +366,7 @@ export function playCard(state: GameState, card: Card): GameState {
         trickNumber: newTrickNumber,
         phase: gameOver ? 'game-over' : 'scoring',
         roundScores: scoreDetails.teamPoints,
+        roundScoreDetails: scoreDetails,
       };
     }
 

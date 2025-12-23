@@ -49,6 +49,7 @@ export interface GameState {
   trickNumber: number;
   leadPlayerIndex: number;
   roundScores: Record<string, number>;
+  roundScoreDetails?: RoundScoreDetails | null;
   deckColor: DeckColor;
   stock: Card[];
   discardPile: Card[];
