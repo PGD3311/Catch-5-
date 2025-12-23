@@ -26,8 +26,8 @@ export function BiddingPanel({ open, highBid, playerName, isDealer, allOthersPas
       exit={{ y: 20, opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={cn(
-        'bg-card/90 backdrop-blur-md rounded-xl border border-border/50',
-        'shadow-lg p-3 sm:p-4'
+        'bg-card/80 backdrop-blur-xl rounded-2xl border border-white/10',
+        'shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-3'
       )}
       data-testid="bidding-panel"
     >

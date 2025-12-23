@@ -1,0 +1,247 @@
+Clean. Way cleaner.
+But you’re still paying a hidden tax: your layout is stacked instead of layered.
+
+Right now the screen reads like:
+
+Top HUD
+
+Table area
+
+Bidding panel
+
+Player identity block
+
+Card hand
+
+Five separate “bands.” Mobile hates bands.
+Mobile wants layers — foreground, midground, background.
+
+Here’s how to take this from “working” to “inevitable.”
+
+1. Collapse the “You” identity block into the card row
+
+That “You / Sort” bar is stealing vertical real estate and not earning it.
+
+Do this instead:
+
+Move “Sort” to a floating icon on the right edge of the card fan
+
+Move “You / Your Team” to a tiny tag above the card fan (like a caption)
+
+Remove the gold box entirely
+
+You instantly win ~40px of clean space.
+
+2. Shrink the bidding panel by ~15–20% height
+
+Not the buttons — the container.
+
+Right now it's too tall because:
+
+It has top padding
+
+It sits on full background
+
+It has large margin above “You”
+
+The solution:
+Make the sheet tighter and let the buttons breathe.
+
+Think of the iOS home indicator area: slim, intentional.
+
+3. Add a subtle blur behind the bidding panel
+
+Notice how your panel currently looks stuck on top, like a card on a table.
+
+You want it to feel like it lives in the same visual world.
+
+Add:
+
+12–20px blur
+
+5%–8% brightness lift
+
+Very faint noise like the table texture
+
+This creates the Apple Arcade softness.
+
+4. Re-center the table area
+
+The middle third of the screen (“Partner / CPU1 / CPU2 / Beat X”) still feels like dead space.
+That’s not because there’s too much empty area — it’s because the content isn’t aligned to the moment.
+
+What you want:
+
+Partner label at top-center
+
+CPU labels left-right, visually aligned
+
+“Beat X or pass” sitting closer to the bidding sheet to unify them
+
+Bring them down ~60–80px. This connects the eye flow.
+
+5. Card fan still needs a tiny lift
+
+Right now they’re usable, but they feel attached to the bottom.
+
+Give them a 12–14px lift with a soft shadow behind.
+This makes them feel like a physical fan resting above the UI, not inside it.
+
+Also:
+Reduce the angle of the fan slightly — the outer cards feel too tilted.
+
+6. Consider snapping the bidding panel to two positions
+
+This is optional, but high impact.
+
+Case A — “Compact”
+Panel sits just above the card row. Cards fully visible.
+
+Case B — “Expanded”
+Panel slides up 20% for reading clarity. Cards still visible but slightly compressed.
+
+This adds dynamism and solves all future UI conflicts.
+
+7. Your color noise background might be too intense
+
+Zoom in: the static-like texture behind the table area looks heavy on mobile.
+
+Tone down by 30–40%.
+Your cards + panel should be the heroes, not the noise.
+
+Softer = higher perceived polish.
+
+Overall
+
+This is very close.
+You’re one pass away from a UI that feels Apple Arcade–grade.
+
+If you want, I can sketch the exact spacing + hierarchy as a blueprint:
+
+px values
+
+margins
+
+snap heights
+
+opacity levels
+
+shadow tokens
+
+Just send one more screenshot where the entire screen (top to bottom) is visible and I’ll lay the full spec on top of it.
+
+the cards need to be better legible though. maybe slightly bigger?
+
+Bigger cards alone won’t fix legibility.
+Bigger cards will just steal more vertical space and force you back into the clutter you just escaped.
+
+The real move is this:
+
+Make each card “readable at a glance” without making the whole row taller.
+
+That’s a design problem, not a size problem.
+
+Here’s how you solve it with taste:
+
+1. Increase rank contrast, not card size
+
+Right now the rank (K, 10, 2, A…) sits too close to the suit icon, same weight, same color intensity.
+
+On a dense card row, the eye needs a hook.
+
+Fix:
+
+Rank: 2–3px larger, bold or semi-bold
+
+Suit: 1–2px smaller, lighter or outlined
+
+Darken the background behind the rank by 8–12% (micro gradient)
+
+Increase color saturation of suits slightly
+
+This creates instant scanning clarity.
+
+You gain legibility without consuming space.
+
+2. Use adaptive scaling
+
+This is huge.
+On mobile, you don’t need static-size cards.
+
+Use:
+
+Min width (for 10+ cards in hand)
+
+Max width (for 5–6 cards)
+
+Smooth scale between
+
+Apple Arcade does this everywhere: the UI responds to hand size.
+
+Your current size is “one-size-fits-none.”
+
+3. Lift the card face off the background
+
+Right now the card body and the playfield background are too similar in luminance.
+
+Add:
+
+Soft drop shadow (4–6px blur, 20–30% opacity)
+
+Slight rim light at the card edges
+
+2° rotation variance (tiny, but adds depth)
+
+This makes the card row feel like a physical fan sitting above the UI.
+
+Legibility comes from separation, not size.
+
+4. Improve the fan curve
+
+Your fan curve is slightly too steep.
+Outer cards tilt so far they become harder to read.
+
+Flatten the curve by 10–15%.
+The hand suddenly reads like a line, not a parabola.
+
+Much easier for the brain to scan.
+
+5. Add a “hover/lift” on press
+
+When the user touches a card:
+
+It scales up by 8–12%
+
+Lifts forward
+
+Straightens a bit
+
+Suit + rank brighten
+
+You give users a “zoom” moment without permanently making cards huge.
+
+6. The nuclear option: two-row fan (only when needed)
+
+If the hand gets crazy (10–13 cards), you can:
+
+Keep top row smaller
+
+Bottom row larger
+
+Seamless animation when a player selects a card (it lifts to the front row)
+
+This is the Arcade+ version if you want maximum clarity without increasing the vertical footprint.
+
+What I’d do first (low effort, maximum impact):
+
+Increase rank font size by ~12–14%
+
+Slightly reduce suit size
+
+Add subtle shadow under cards
+
+Flatten the fan by ~10%
+
+Add press-to-enlarge interaction
+
+This alone makes your hand instantly readable.

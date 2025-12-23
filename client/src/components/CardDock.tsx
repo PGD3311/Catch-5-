@@ -93,9 +93,10 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
     return Math.abs(val - cardCenterX);
   });
 
-  const baseWidth = 42;
-  const maxWidth = 56;
-  const magnificationRange = 80;
+  // Adaptive sizing based on card count - larger for fewer cards
+  const baseWidth = totalCards <= 5 ? 56 : totalCards <= 7 ? 48 : 44;
+  const maxWidth = totalCards <= 5 ? 72 : totalCards <= 7 ? 64 : 56;
+  const magnificationRange = 70;
   
   const widthSync = useTransform(distance, [0, magnificationRange], [maxWidth, baseWidth]);
   const width = useSpring(widthSync, { stiffness: 400, damping: 30, mass: 0.5 });
@@ -121,17 +122,20 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
       <motion.button
         onClick={onClick}
         disabled={disabled}
+        whileTap={!disabled ? { scale: 1.15, y: -8, zIndex: 50, rotate: 0 } : undefined}
+        transition={{ type: "spring", stiffness: 500, damping: 25 }}
         className={cn(
-          'w-full h-full rounded-xl relative overflow-hidden',
-          'shadow-[0_4px_12px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)]',
-          'dark:shadow-[0_4px_16px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.1)]',
+          'w-full h-full rounded-lg relative overflow-hidden',
+          'shadow-[0_6px_16px_rgba(0,0,0,0.2),0_3px_6px_rgba(0,0,0,0.12)]',
+          'dark:shadow-[0_8px_20px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.3)]',
           'bg-gradient-to-br from-white via-slate-50 to-slate-100',
           'dark:from-slate-800 dark:via-slate-850 dark:to-slate-900',
-          'transform-gpu transition-shadow duration-200',
+          'transform-gpu transition-shadow duration-150',
           !disabled && 'cursor-pointer',
-          !disabled && 'hover:shadow-[0_12px_28px_rgba(0,0,0,0.25),0_6px_12px_rgba(0,0,0,0.15)]',
+          !disabled && 'hover:shadow-[0_10px_24px_rgba(0,0,0,0.28),0_6px_10px_rgba(0,0,0,0.18)] hover:brightness-105',
+          !disabled && 'active:shadow-[0_16px_32px_rgba(0,0,0,0.35),0_8px_16px_rgba(0,0,0,0.22)]',
           disabled && 'opacity-40 cursor-not-allowed grayscale-[30%]',
-          isTrump && 'ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 ring-offset-background'
+          isTrump && 'ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-1 ring-offset-background'
         )}
         data-testid={`card-${card.rank}-${card.suit}`}
       >
@@ -146,21 +150,26 @@ function CardContent({ card }: { card: CardType }) {
   
   return (
     <div className="absolute inset-0 flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-black/5 dark:from-white/10 dark:to-black/20 pointer-events-none" />
-      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-200/80 dark:ring-slate-600/50 pointer-events-none" />
+      {/* Card face gradient for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50/80 to-slate-100/60 dark:from-slate-700 dark:via-slate-800/90 dark:to-slate-900 pointer-events-none" />
+      {/* Rim light effect */}
+      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/60 dark:ring-white/10 pointer-events-none" />
 
-      <div className={cn('absolute top-1 left-1.5 flex flex-col items-center z-10', suitColor)}>
-        <span className="text-[10px] sm:text-xs font-bold leading-none">{card.rank}</span>
-        <SuitIcon suit={card.suit} className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+      {/* Top-left rank/suit - LARGER rank for better legibility */}
+      <div className={cn('absolute top-0.5 left-1 flex flex-col items-center z-10', suitColor)}>
+        <span className="text-xs sm:text-sm font-black leading-none drop-shadow-sm">{card.rank}</span>
+        <SuitIcon suit={card.suit} className="w-2 h-2 sm:w-2.5 sm:h-2.5 opacity-80" />
       </div>
 
+      {/* Center suit icon */}
       <div className={cn('flex-1 flex items-center justify-center', suitColor)}>
-        <SuitIcon suit={card.suit} className="w-6 h-6 sm:w-8 sm:h-8 drop-shadow-md" />
+        <SuitIcon suit={card.suit} className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-md" />
       </div>
 
-      <div className={cn('absolute bottom-1 right-1.5 flex flex-col items-center rotate-180 z-10', suitColor)}>
-        <span className="text-[10px] sm:text-xs font-bold leading-none">{card.rank}</span>
-        <SuitIcon suit={card.suit} className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+      {/* Bottom-right rank/suit (rotated) */}
+      <div className={cn('absolute bottom-0.5 right-1 flex flex-col items-center rotate-180 z-10', suitColor)}>
+        <span className="text-xs sm:text-sm font-black leading-none drop-shadow-sm">{card.rank}</span>
+        <SuitIcon suit={card.suit} className="w-2 h-2 sm:w-2.5 sm:h-2.5 opacity-80" />
       </div>
     </div>
   );

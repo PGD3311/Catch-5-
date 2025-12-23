@@ -233,7 +233,40 @@ export function PlayerArea({
         </>
       ) : (
         <>
-          {renderFullPanel()}
+          {/* Compact identity line for bottom player */}
+          <div className="flex items-center justify-center gap-3 w-full px-4">
+            <div className="flex items-center gap-1.5">
+              <span className={cn(
+                'text-xs font-medium',
+                isYourTeam ? 'text-emerald-400' : 'text-foreground/70'
+              )}>{player.name}</span>
+              {isDealer && <span className="text-[9px] text-amber-400 font-bold">D</span>}
+              {isBidder && <Crown className="w-3 h-3 text-amber-400" />}
+              {showBidResult && player.bid !== null && (
+                <Badge 
+                  variant={player.bid > 0 ? 'outline' : 'secondary'} 
+                  className={cn(
+                    'text-[9px] px-1.5 py-0 h-4',
+                    player.bid > 0 && 'border-amber-500/40 text-amber-400'
+                  )}
+                >
+                  {player.bid === 0 ? 'Pass' : player.bid}
+                </Badge>
+              )}
+              {isCurrentPlayer && (
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              )}
+            </div>
+            {onSortHand && (
+              <button
+                onClick={onSortHand}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                data-testid="button-sort-hand"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           {showCards && renderBottomCards()}
         </>
       )}
