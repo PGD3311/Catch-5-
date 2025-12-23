@@ -146,6 +146,12 @@ export function PlayerArea({
               {player.bid === 0 ? 'Passed' : `Bid ${player.bid}`}
             </Badge>
           )}
+          {/* Show card count on mobile for non-bottom players */}
+          {!isBottom && player.hand.length > 0 && (
+            <Badge variant="secondary" className="text-xs sm:hidden">
+              {player.hand.length} cards
+            </Badge>
+          )}
           {isBottom && showCards && onSortHand && (
             <Button
               size="sm"
@@ -185,62 +191,83 @@ export function PlayerArea({
         )}
       </motion.div>
 
-      <div className={cn(getHandClasses(), isBottom && 'min-h-24 sm:min-h-32 md:min-h-36 pt-1 sm:pt-2')}>
-        <AnimatePresence mode="popLayout">
-          {showCards ? (
-            player.hand.map((card, index) => {
-              const canPlay = canPlayCard ? canPlayCard(card) : true;
-              const cardCount = player.hand.length;
-              const spreadAngle = cardCount > 6 ? 1.5 : 2;
-              const rotation = isBottom ? ((index - (cardCount - 1) / 2) * spreadAngle) : 0;
-              const mobileOverlap = cardCount > 6 ? -32 : -28;
-              const desktopOverlap = cardCount > 6 ? -18 : -14;
-
-              return (
-                <motion.div
-                  key={card.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.5, y: -30 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="[--overlap-mobile:-32px] [--overlap-desktop:-14px] sm:[--overlap-mobile:-18px]"
-                  style={{
-                    marginLeft: isBottom && index > 0 ? `clamp(${mobileOverlap}px, -4vw, ${desktopOverlap}px)` : undefined,
-                    marginTop: isSide && index > 0 ? '-36px' : undefined,
-                    rotate: isBottom ? rotation : 0,
-                    zIndex: index,
-                  }}
-                >
-                  <PlayingCard
-                    card={card}
-                    onClick={() => onCardClick?.(card)}
-                    disabled={!canPlay || !isCurrentPlayer}
-                    small={false}
-                    trumpSuit={trumpSuit}
-                  />
-                </motion.div>
-              );
-            })
-          ) : (
-            player.hand.map((_, index) => (
+      {/* On mobile, hide card stacks for non-bottom players - just show card count */}
+      {!isBottom ? (
+        <div className="hidden sm:flex flex-col items-center">
+          <AnimatePresence mode="popLayout">
+            {player.hand.map((_, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 style={{
-                  marginLeft: !isSide && index > 0 ? '-28px' : undefined,
                   marginTop: isSide && index > 0 ? '-36px' : undefined,
+                  marginLeft: !isSide && index > 0 ? '-28px' : undefined,
                   zIndex: index,
                 }}
               >
                 <CardBack deckColor={deckColor} small />
               </motion.div>
-            ))
-          )}
-        </AnimatePresence>
-      </div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className={cn(getHandClasses(), isBottom && 'min-h-24 sm:min-h-32 md:min-h-36 pt-1 sm:pt-2')}>
+          <AnimatePresence mode="popLayout">
+            {showCards ? (
+              player.hand.map((card, index) => {
+                const canPlay = canPlayCard ? canPlayCard(card) : true;
+                const cardCount = player.hand.length;
+                const spreadAngle = cardCount > 6 ? 1.5 : 2;
+                const rotation = isBottom ? ((index - (cardCount - 1) / 2) * spreadAngle) : 0;
+                const mobileOverlap = cardCount > 6 ? -32 : -28;
+                const desktopOverlap = cardCount > 6 ? -18 : -14;
+
+                return (
+                  <motion.div
+                    key={card.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, y: -30 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    className="[--overlap-mobile:-32px] [--overlap-desktop:-14px] sm:[--overlap-mobile:-18px]"
+                    style={{
+                      marginLeft: isBottom && index > 0 ? `clamp(${mobileOverlap}px, -4vw, ${desktopOverlap}px)` : undefined,
+                      rotate: isBottom ? rotation : 0,
+                      zIndex: index,
+                    }}
+                  >
+                    <PlayingCard
+                      card={card}
+                      onClick={() => onCardClick?.(card)}
+                      disabled={!canPlay || !isCurrentPlayer}
+                      small={false}
+                      trumpSuit={trumpSuit}
+                    />
+                  </motion.div>
+                );
+              })
+            ) : (
+              player.hand.map((_, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  style={{
+                    marginLeft: index > 0 ? '-28px' : undefined,
+                    zIndex: index,
+                  }}
+                >
+                  <CardBack deckColor={deckColor} small />
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
