@@ -46,6 +46,8 @@ export interface GameState {
   highBid: number;
   bidderId: string | null;
   currentTrick: TrickCard[];
+  lastTrick?: TrickCard[];
+  lastTrickWinnerId?: string | null;
   trickNumber: number;
   leadPlayerIndex: number;
   roundScores: Record<string, number>;

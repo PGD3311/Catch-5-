@@ -1,4 +1,4 @@
-import { GameState, Card as CardType, Suit, Player } from '@shared/gameTypes';
+import { GameState, Card as CardType, Suit, Player, TrickCard } from '@shared/gameTypes';
 import { PlayerArea } from './PlayerArea';
 import { TrickArea } from './TrickArea';
 import { GameHeader } from './GameHeader';
@@ -12,11 +12,13 @@ import { PurgeDrawModal } from './PurgeDrawModal';
 import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
 import { MultiplayerLobby } from './MultiplayerLobby';
+import { LastTrickModal } from './LastTrickModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useToast } from '@/hooks/use-toast';
+import { History } from 'lucide-react';
 import {
   initializeGame,
   dealCards,
@@ -42,7 +44,9 @@ export function GameBoard() {
   const [showPurgeDraw, setShowPurgeDraw] = useState(false);
   const [showDealerDraw, setShowDealerDraw] = useState(false);
   const [showMultiplayerLobby, setShowMultiplayerLobby] = useState(false);
+  const [showLastTrick, setShowLastTrick] = useState(false);
   const [trickWinner, setTrickWinner] = useState<Player | null>(null);
+  const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const trickWinnerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
@@ -140,13 +144,15 @@ export function GameBoard() {
           const winnerId = determineTrickWinner(newTrick, prev.trumpSuit);
           const winner = prev.players.find(p => p.id === winnerId);
           if (winner) {
+            setDisplayTrick(newTrick);
             setTrickWinner(winner);
             if (trickWinnerTimeoutRef.current) {
               clearTimeout(trickWinnerTimeoutRef.current);
             }
             trickWinnerTimeoutRef.current = setTimeout(() => {
               setTrickWinner(null);
-            }, 1200);
+              setDisplayTrick([]);
+            }, 2000);
           }
         }
         
@@ -225,7 +231,7 @@ export function GameBoard() {
     if (gameState.phase === 'playing') {
       const currentPlayer = gameState.players[gameState.currentPlayerIndex];
       if (!currentPlayer.isHuman && currentPlayer.hand.length > 0) {
-        const baseDelay = trickWinner ? 1400 : 700 + Math.random() * 500;
+        const baseDelay = trickWinner ? 2200 : 700 + Math.random() * 500;
         const timer = setTimeout(() => {
           const cardToPlay = getCpuCardToPlay(
             currentPlayer.hand,
@@ -238,13 +244,15 @@ export function GameBoard() {
             const winnerId = determineTrickWinner(newTrick, gameState.trumpSuit);
             const winner = gameState.players.find(p => p.id === winnerId);
             if (winner) {
+              setDisplayTrick(newTrick);
               setTrickWinner(winner);
               if (trickWinnerTimeoutRef.current) {
                 clearTimeout(trickWinnerTimeoutRef.current);
               }
               trickWinnerTimeoutRef.current = setTimeout(() => {
                 setTrickWinner(null);
-              }, 1200);
+                setDisplayTrick([]);
+              }, 2000);
             }
           }
           
@@ -386,11 +394,31 @@ export function GameBoard() {
             />
 
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
-              <TrickArea currentTrick={gameState.currentTrick} players={gameState.players} trumpSuit={gameState.trumpSuit} trickWinner={trickWinner} />
+              <TrickArea 
+                currentTrick={displayTrick.length > 0 ? displayTrick : gameState.currentTrick} 
+                players={gameState.players} 
+                trumpSuit={gameState.trumpSuit} 
+                trickWinner={trickWinner} 
+              />
               
-              {(gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'playing') && (
-                <ActionPrompt gameState={gameState} />
-              )}
+              <div className="flex items-center gap-3">
+                {(gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'playing') && (
+                  <ActionPrompt gameState={gameState} />
+                )}
+                
+                {gameState.lastTrick && gameState.lastTrick.length > 0 && gameState.phase === 'playing' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowLastTrick(true)}
+                    className="gap-1.5"
+                    data-testid="button-last-trick"
+                  >
+                    <History className="w-4 h-4" />
+                    Last Trick
+                  </Button>
+                )}
+              </div>
             </div>
 
             <PlayerArea
@@ -491,6 +519,15 @@ export function GameBoard() {
         dealerDrawCards={gameState.dealerDrawCards || []}
         onComplete={handleDealerDrawComplete}
         deckColor={gameState.deckColor}
+      />
+
+      <LastTrickModal
+        open={showLastTrick}
+        onClose={() => setShowLastTrick(false)}
+        lastTrick={gameState.lastTrick || []}
+        players={gameState.players}
+        winnerId={gameState.lastTrickWinnerId || null}
+        trumpSuit={gameState.trumpSuit}
       />
     </div>
   );
