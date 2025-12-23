@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { DeckColor, DECK_COLORS } from '@shared/gameTypes';
 import { cn } from '@/lib/utils';
-import { RefreshCw, HelpCircle, Sun, Moon, User, Bot } from 'lucide-react';
+import { RefreshCw, HelpCircle, User, Bot } from 'lucide-react';
 
 interface PlayerConfig {
   id: string;
@@ -20,8 +20,6 @@ interface SettingsPanelProps {
   onDeckColorChange: (color: DeckColor) => void;
   onNewGame: () => void;
   onShowRules: () => void;
-  darkMode: boolean;
-  onToggleDarkMode: () => void;
   playerConfigs: PlayerConfig[];
   onTogglePlayerType: (playerId: string) => void;
   onPlayerNameChange: (playerId: string, name: string) => void;
@@ -34,8 +32,6 @@ export function SettingsPanel({
   onDeckColorChange,
   onNewGame,
   onShowRules,
-  darkMode,
-  onToggleDarkMode,
   playerConfigs,
   onTogglePlayerType,
   onPlayerNameChange,
@@ -140,20 +136,6 @@ export function SettingsPanel({
             <p className="text-xs text-muted-foreground text-center">
               {DECK_COLORS.find(c => c.value === deckColor)?.label}
             </p>
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Dark Mode</Label>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onToggleDarkMode}
-              data-testid="button-toggle-dark-mode"
-            >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
           </div>
 
           <Separator />

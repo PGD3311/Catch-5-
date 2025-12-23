@@ -40,12 +40,6 @@ export function GameBoard() {
   const [showPurgeDraw, setShowPurgeDraw] = useState(false);
   const [showDealerDraw, setShowDealerDraw] = useState(false);
   const [showMultiplayerLobby, setShowMultiplayerLobby] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true';
-    }
-    return false;
-  });
 
   const multiplayer = useMultiplayer();
   const isMultiplayerMode = !!multiplayer.roomCode;
@@ -70,14 +64,6 @@ export function GameBoard() {
     }));
   }, []);
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('darkMode', String(darkMode));
-  }, [darkMode]);
 
   const handleStartGame = useCallback(() => {
     if (isMultiplayerMode) {
@@ -430,8 +416,6 @@ export function GameBoard() {
           setSettingsOpen(false);
           setRulesOpen(true);
         }}
-        darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode(!darkMode)}
         playerConfigs={gameState.players.map(p => ({ id: p.id, name: p.name, isHuman: p.isHuman }))}
         onTogglePlayerType={handleTogglePlayerType}
         onPlayerNameChange={handlePlayerNameChange}
