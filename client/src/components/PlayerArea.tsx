@@ -2,7 +2,8 @@ import { Player, DeckColor, Card as CardType, Team, Suit } from '@shared/gameTyp
 import { PlayingCard, CardBack } from './PlayingCard';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { User, Bot, Crown, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Bot, Crown, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PlayerAreaProps {
@@ -18,6 +19,7 @@ interface PlayerAreaProps {
   showCards?: boolean;
   showBidResult?: boolean;
   trumpSuit?: Suit | null;
+  onSortHand?: () => void;
 }
 
 export function PlayerArea({
@@ -33,6 +35,7 @@ export function PlayerArea({
   showCards = false,
   showBidResult = false,
   trumpSuit,
+  onSortHand,
 }: PlayerAreaProps) {
   const isBottom = position === 'bottom';
   const isTop = position === 'top';
@@ -142,6 +145,18 @@ export function PlayerArea({
             >
               {player.bid === 0 ? 'Passed' : `Bid ${player.bid}`}
             </Badge>
+          )}
+          {isBottom && showCards && onSortHand && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onSortHand}
+              className="h-7 px-2 text-xs"
+              data-testid="button-sort-hand"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 mr-1" />
+              Sort
+            </Button>
           )}
         </div>
 
