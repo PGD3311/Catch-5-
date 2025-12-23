@@ -11,8 +11,11 @@ import { ShareModal } from './ShareModal';
 import { PurgeDrawModal } from './PurgeDrawModal';
 import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
+import { MultiplayerLobby } from './MultiplayerLobby';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
+import { useMultiplayer } from '@/hooks/useMultiplayer';
 import {
   initializeGame,
   dealCards,
@@ -30,18 +33,24 @@ import {
 } from '@/lib/gameEngine';
 
 export function GameBoard() {
-  const [gameState, setGameState] = useState<GameState>(() => initializeGame());
+  const [localGameState, setGameState] = useState<GameState>(() => initializeGame());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [showPurgeDraw, setShowPurgeDraw] = useState(false);
   const [showDealerDraw, setShowDealerDraw] = useState(false);
+  const [showMultiplayerLobby, setShowMultiplayerLobby] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true';
     }
     return false;
   });
+
+  const multiplayer = useMultiplayer();
+  const isMultiplayerMode = !!multiplayer.roomCode;
+  const gameState = isMultiplayerMode && multiplayer.gameState ? multiplayer.gameState : localGameState;
+  const mySeatIndex = multiplayer.seatIndex ?? 0;
 
   const handleTogglePlayerType = useCallback((playerId: string) => {
     setGameState(prev => ({
@@ -84,17 +93,25 @@ export function GameBoard() {
   }, []);
 
   const handleBid = useCallback((bid: number) => {
-    setGameState(prev => processBid(prev, bid));
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.sendAction('bid', { amount: bid });
+    } else {
+      setGameState(prev => processBid(prev, bid));
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handleTrumpSelect = useCallback((suit: Suit) => {
-    setGameState(prev => ({
-      ...prev,
-      trumpSuit: suit,
-      phase: 'purge-draw' as const,
-    }));
-    setShowPurgeDraw(true);
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.sendAction('select_trump', { suit });
+    } else {
+      setGameState(prev => ({
+        ...prev,
+        trumpSuit: suit,
+        phase: 'purge-draw' as const,
+      }));
+      setShowPurgeDraw(true);
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handlePurgeDrawComplete = useCallback(() => {
     setShowPurgeDraw(false);
@@ -102,14 +119,18 @@ export function GameBoard() {
   }, []);
 
   const handleCardPlay = useCallback((card: CardType) => {
-    setGameState(prev => {
-      const currentPlayer = prev.players[prev.currentPlayerIndex];
-      if (!canPlayCard(card, currentPlayer.hand, prev.currentTrick)) {
-        return prev;
-      }
-      return playCard(prev, card);
-    });
-  }, []);
+    if (isMultiplayerMode) {
+      multiplayer.sendAction('play_card', { card });
+    } else {
+      setGameState(prev => {
+        const currentPlayer = prev.players[prev.currentPlayerIndex];
+        if (!canPlayCard(card, currentPlayer.hand, prev.currentTrick)) {
+          return prev;
+        }
+        return playCard(prev, card);
+      });
+    }
+  }, [isMultiplayerMode, multiplayer]);
 
   const handleContinue = useCallback(() => {
     setGameState(prev => {
@@ -178,20 +199,24 @@ export function GameBoard() {
     }
   }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit]);
 
-  const humanPlayer = gameState.players[0];
-  const partnerPlayer = gameState.players[2];
-  const opponent1 = gameState.players[1];
-  const opponent2 = gameState.players[3];
+  const getRotatedIndex = (offset: number) => (mySeatIndex + offset) % 4;
+  const humanPlayer = gameState.players[mySeatIndex];
+  const partnerPlayer = gameState.players[getRotatedIndex(2)];
+  const opponent1 = gameState.players[getRotatedIndex(1)];
+  const opponent2 = gameState.players[getRotatedIndex(3)];
   
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const isHumanTurn = currentPlayer?.isHuman;
+  const isMyTurn = isMultiplayerMode 
+    ? gameState.currentPlayerIndex === mySeatIndex 
+    : currentPlayer?.isHuman;
   
   const passedCount = gameState.players.filter(p => p.bid === 0).length;
   const isDealer = gameState.currentPlayerIndex === gameState.dealerIndex;
   
-  const showBiddingModal = gameState.phase === 'bidding' && isHumanTurn;
+  const showBiddingModal = gameState.phase === 'bidding' && isMyTurn;
+  const amIBidder = gameState.bidderId === gameState.players[mySeatIndex]?.id;
   const showTrumpSelector = gameState.phase === 'trump-selection' && 
-    gameState.players.find(p => p.id === gameState.bidderId)?.isHuman;
+    (isMultiplayerMode ? amIBidder : gameState.players.find(p => p.id === gameState.bidderId)?.isHuman);
   const showScoreModal = gameState.phase === 'scoring' || gameState.phase === 'game-over';
   const showBidResults = gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'purge-draw';
 
@@ -231,17 +256,42 @@ export function GameBoard() {
               </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" onClick={handleStartGame} className="px-8" data-testid="button-start-game">
-              Deal Cards
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
-              How to Play
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Open Settings to configure players and deck colors
-          </p>
+          {!showMultiplayerLobby ? (
+            <>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" onClick={handleStartGame} className="px-8" data-testid="button-start-game">
+                  Deal Cards
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => setShowMultiplayerLobby(true)} data-testid="button-online-play">
+                  Online Play
+                </Button>
+              </div>
+              <Button variant="ghost" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
+                How to Play
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Open Settings to configure players and deck colors
+              </p>
+            </>
+          ) : (
+            <MultiplayerLobby
+              connected={multiplayer.connected}
+              roomCode={multiplayer.roomCode}
+              seatIndex={multiplayer.seatIndex}
+              players={multiplayer.players}
+              error={multiplayer.error}
+              onCreateRoom={multiplayer.createRoom}
+              onJoinRoom={multiplayer.joinRoom}
+              onStartGame={multiplayer.startGame}
+              onLeaveRoom={() => {
+                multiplayer.leaveRoom();
+                setShowMultiplayerLobby(false);
+              }}
+              onClose={() => setShowMultiplayerLobby(false)}
+              deckColor={localGameState.deckColor}
+              targetScore={localGameState.targetScore}
+            />
+          )}
         </div>
       )}
 
@@ -251,9 +301,9 @@ export function GameBoard() {
             <PlayerArea
               player={partnerPlayer}
               team={getTeamForPlayer(partnerPlayer)}
-              isCurrentPlayer={gameState.currentPlayerIndex === 2}
+              isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(2)}
               isBidder={gameState.bidderId === partnerPlayer.id}
-              isDealer={gameState.dealerIndex === 2}
+              isDealer={gameState.dealerIndex === getRotatedIndex(2)}
               deckColor={gameState.deckColor}
               position="top"
               showBidResult={showBidResults}
@@ -264,9 +314,9 @@ export function GameBoard() {
             <PlayerArea
               player={opponent1}
               team={getTeamForPlayer(opponent1)}
-              isCurrentPlayer={gameState.currentPlayerIndex === 1}
+              isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(1)}
               isBidder={gameState.bidderId === opponent1.id}
-              isDealer={gameState.dealerIndex === 1}
+              isDealer={gameState.dealerIndex === getRotatedIndex(1)}
               deckColor={gameState.deckColor}
               position="left"
               showBidResult={showBidResults}
@@ -283,9 +333,9 @@ export function GameBoard() {
             <PlayerArea
               player={opponent2}
               team={getTeamForPlayer(opponent2)}
-              isCurrentPlayer={gameState.currentPlayerIndex === 3}
+              isCurrentPlayer={gameState.currentPlayerIndex === getRotatedIndex(3)}
               isBidder={gameState.bidderId === opponent2.id}
-              isDealer={gameState.dealerIndex === 3}
+              isDealer={gameState.dealerIndex === getRotatedIndex(3)}
               deckColor={gameState.deckColor}
               position="right"
               showBidResult={showBidResults}
@@ -296,12 +346,12 @@ export function GameBoard() {
             <PlayerArea
               player={humanPlayer}
               team={getTeamForPlayer(humanPlayer)}
-              isCurrentPlayer={gameState.currentPlayerIndex === 0}
+              isCurrentPlayer={gameState.currentPlayerIndex === mySeatIndex}
               isBidder={gameState.bidderId === humanPlayer.id}
-              isDealer={gameState.dealerIndex === 0}
+              isDealer={gameState.dealerIndex === mySeatIndex}
               deckColor={gameState.deckColor}
-              onCardClick={handleCardPlay}
-              canPlayCard={(card) => canPlayCard(card, humanPlayer.hand, gameState.currentTrick)}
+              onCardClick={isMyTurn && gameState.phase === 'playing' ? handleCardPlay : undefined}
+              canPlayCard={(card) => isMyTurn && canPlayCard(card, humanPlayer.hand, gameState.currentTrick)}
               position="bottom"
               showCards
               showBidResult={showBidResults}
@@ -360,7 +410,11 @@ export function GameBoard() {
         onPlayerNameChange={handlePlayerNameChange}
       />
 
-      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
+      <ShareModal 
+        open={shareOpen} 
+        onClose={() => setShareOpen(false)} 
+        roomCode={multiplayer.roomCode}
+      />
 
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
 

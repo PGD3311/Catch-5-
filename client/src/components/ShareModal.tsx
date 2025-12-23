@@ -2,20 +2,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
-import { Check, Copy, Link2, Users } from 'lucide-react';
+import { Check, Copy, Link2, Users, Wifi } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ShareModalProps {
   open: boolean;
   onClose: () => void;
+  roomCode?: string | null;
 }
 
-export function ShareModal({ open, onClose }: ShareModalProps) {
+export function ShareModal({ open, onClose, roomCode }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const gameUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const isOnlineGame = !!roomCode;
+  const gameUrl = typeof window !== 'undefined' 
+    ? (roomCode ? `${window.location.origin}?room=${roomCode}` : window.location.href)
+    : '';
 
   const handleCopy = async () => {
     try {
@@ -23,7 +28,9 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
       setCopied(true);
       toast({
         title: 'Link copied!',
-        description: 'Share this link with your friends to play together.',
+        description: isOnlineGame 
+          ? 'Share this link to invite players to your game.' 
+          : 'Share this link with your friends to play together.',
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -41,22 +48,34 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Share with Friends
+            {isOnlineGame ? 'Invite Players' : 'Share with Friends'}
           </DialogTitle>
           <DialogDescription>
-            Send this link to invite friends to play Catch 5!
+            {isOnlineGame 
+              ? 'Send this link or room code to invite players!'
+              : 'Send this link to invite friends to play Catch 5!'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {isOnlineGame && (
+            <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-muted/50">
+              <Wifi className="w-5 h-5 text-green-500" />
+              <span className="text-sm font-medium">Room Code:</span>
+              <Badge variant="outline" className="text-lg font-mono px-3 py-1">
+                {roomCode}
+              </Badge>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="share-link">Game Link</Label>
+            <Label htmlFor="share-link">{isOnlineGame ? 'Invite Link' : 'Game Link'}</Label>
             <div className="flex gap-2">
               <Input
                 id="share-link"
                 value={gameUrl}
                 readOnly
-                className="flex-1"
+                className="flex-1 font-mono text-sm"
                 data-testid="input-share-link"
               />
               <Button
@@ -79,16 +98,23 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
               How it works
             </div>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>Share this link with up to 3 friends</li>
-              <li>Each person opens the link in their browser</li>
-              <li>Toggle players to Human in Settings</li>
-              <li>Take turns on the same device or play on separate devices</li>
+              {isOnlineGame ? (
+                <>
+                  <li>Share the link or room code with friends</li>
+                  <li>They can join from their own device</li>
+                  <li>Once 4 players join, start the game!</li>
+                  <li>Empty seats will be filled by CPU players</li>
+                </>
+              ) : (
+                <>
+                  <li>Share this link with up to 3 friends</li>
+                  <li>Each person opens the link in their browser</li>
+                  <li>Use Online Play to create a room</li>
+                  <li>Play together from different devices</li>
+                </>
+              )}
             </ul>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center">
-            Currently supports local play - online multiplayer coming soon!
-          </p>
         </div>
 
         <Button onClick={onClose} className="w-full" data-testid="button-close-share">
