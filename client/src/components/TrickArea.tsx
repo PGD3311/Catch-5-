@@ -1,13 +1,14 @@
-import { TrickCard, Player } from '@shared/gameTypes';
+import { TrickCard, Player, Suit } from '@shared/gameTypes';
 import { PlayingCard } from './PlayingCard';
 import { cn } from '@/lib/utils';
 
 interface TrickAreaProps {
   currentTrick: TrickCard[];
   players: Player[];
+  trumpSuit?: Suit | null;
 }
 
-export function TrickArea({ currentTrick, players }: TrickAreaProps) {
+export function TrickArea({ currentTrick, players, trumpSuit }: TrickAreaProps) {
   const getPositionForPlayer = (playerId: string): { x: string; y: string } => {
     const playerIndex = players.findIndex(p => p.id === playerId);
     switch (playerIndex) {
@@ -48,7 +49,7 @@ export function TrickArea({ currentTrick, players }: TrickAreaProps) {
             }}
           >
             <div className="relative">
-              <PlayingCard card={trickCard.card} small />
+              <PlayingCard card={trickCard.card} small trumpSuit={trumpSuit} />
               <span
                 className={cn(
                   'absolute -bottom-5 left-1/2 -translate-x-1/2',

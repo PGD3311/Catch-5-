@@ -1,4 +1,4 @@
-import { Player, DeckColor, Card as CardType, Team } from '@shared/gameTypes';
+import { Player, DeckColor, Card as CardType, Team, Suit } from '@shared/gameTypes';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ interface PlayerAreaProps {
   position: 'bottom' | 'top' | 'left' | 'right';
   showCards?: boolean;
   showBidResult?: boolean;
+  trumpSuit?: Suit | null;
 }
 
 export function PlayerArea({
@@ -30,6 +31,7 @@ export function PlayerArea({
   position,
   showCards = false,
   showBidResult = false,
+  trumpSuit,
 }: PlayerAreaProps) {
   const isBottom = position === 'bottom';
   const isTop = position === 'top';
@@ -140,6 +142,7 @@ export function PlayerArea({
                   onClick={() => onCardClick?.(card)}
                   disabled={!canPlay || !isCurrentPlayer}
                   small={false}
+                  trumpSuit={trumpSuit}
                 />
               </div>
             );

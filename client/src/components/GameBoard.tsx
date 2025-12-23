@@ -329,6 +329,7 @@ export function GameBoard() {
               deckColor={gameState.deckColor}
               position="top"
               showBidResult={showBidResults}
+              trumpSuit={gameState.trumpSuit}
             />
           </div>
 
@@ -342,10 +343,11 @@ export function GameBoard() {
               deckColor={gameState.deckColor}
               position="left"
               showBidResult={showBidResults}
+              trumpSuit={gameState.trumpSuit}
             />
 
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
-              <TrickArea currentTrick={gameState.currentTrick} players={gameState.players} />
+              <TrickArea currentTrick={gameState.currentTrick} players={gameState.players} trumpSuit={gameState.trumpSuit} />
               
               {(gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'playing') && (
                 <ActionPrompt gameState={gameState} />
@@ -361,6 +363,7 @@ export function GameBoard() {
               deckColor={gameState.deckColor}
               position="right"
               showBidResult={showBidResults}
+              trumpSuit={gameState.trumpSuit}
             />
           </div>
 
@@ -377,6 +380,7 @@ export function GameBoard() {
               position="bottom"
               showCards
               showBidResult={showBidResults}
+              trumpSuit={gameState.trumpSuit}
             />
           </div>
         </div>

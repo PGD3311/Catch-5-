@@ -1,4 +1,4 @@
-import { Card, DeckColor, DECK_COLORS } from '@shared/gameTypes';
+import { Card, DeckColor, DECK_COLORS, Suit } from '@shared/gameTypes';
 import { cn } from '@/lib/utils';
 import { Heart, Diamond, Club, Spade } from 'lucide-react';
 
@@ -11,6 +11,7 @@ interface PlayingCardProps {
   selected?: boolean;
   small?: boolean;
   className?: string;
+  trumpSuit?: Suit | null;
 }
 
 const SuitIcon = ({ suit, className }: { suit: Card['suit']; className?: string }) => {
@@ -43,7 +44,9 @@ export function PlayingCard({
   selected = false,
   small = false,
   className,
+  trumpSuit,
 }: PlayingCardProps) {
+  const isTrump = card && trumpSuit && card.suit === trumpSuit;
   const deckGradient = DECK_COLORS.find(d => d.value === deckColor)?.gradient || 'from-blue-600 to-blue-900';
 
   const baseSize = small ? 'w-14 h-20' : 'w-20 h-28';
@@ -107,6 +110,7 @@ export function PlayingCard({
         !disabled && 'active:translate-y-0 active:shadow-[0_2px_8px_rgba(0,0,0,0.15)]',
         disabled && 'opacity-50 cursor-not-allowed',
         selected && '-translate-y-4 rotate-2 ring-2 ring-primary ring-offset-2 shadow-[0_12px_32px_rgba(0,0,0,0.25)]',
+        isTrump && !selected && 'ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-1 ring-offset-background',
         className
       )}
       data-testid={`card-${card.rank}-${card.suit}`}
