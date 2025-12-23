@@ -36,7 +36,7 @@ export function PurgeDrawModal({ open, players, trumpSuit, onComplete }: PurgeDr
           setCurrentPlayerIndex(prev => prev + 1);
         } else {
           setStep('done');
-          setTimeout(onComplete, 500);
+          setTimeout(onComplete, 4000);
         }
       }
     }, 800);
