@@ -5,6 +5,7 @@ interface RoomPlayer {
   seatIndex: number;
   playerName: string;
   connected: boolean;
+  isCpu?: boolean;
 }
 
 interface MultiplayerState {
@@ -50,6 +51,14 @@ export function useMultiplayer() {
           playerToken: savedToken,
         }));
       }
+      
+      const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 25000);
+      
+      (ws as any).pingInterval = pingInterval;
     };
 
     ws.onmessage = (event) => {
@@ -58,6 +67,9 @@ export function useMultiplayer() {
     };
 
     ws.onclose = () => {
+      if ((ws as any).pingInterval) {
+        clearInterval((ws as any).pingInterval);
+      }
       setState(prev => ({ ...prev, connected: false }));
       if (reconnectAttempts.current < maxReconnectAttempts) {
         reconnectAttempts.current++;
@@ -131,6 +143,9 @@ export function useMultiplayer() {
       case 'error':
         setState(prev => ({ ...prev, error: message.message }));
         break;
+      
+      case 'pong':
+        break;
     }
   };
 
@@ -143,7 +158,7 @@ export function useMultiplayer() {
     };
   }, [connect]);
 
-  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'orange', targetScore: number = 31) => {
+  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'orange', targetScore: number = 25) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'create_room',
@@ -186,6 +201,18 @@ export function useMultiplayer() {
     }
   }, []);
 
+  const addCpu = useCallback((seatIndex: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'add_cpu', seatIndex }));
+    }
+  }, []);
+
+  const removeCpu = useCallback((seatIndex: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'remove_cpu', seatIndex }));
+    }
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -193,5 +220,7 @@ export function useMultiplayer() {
     startGame,
     sendAction,
     leaveRoom,
+    addCpu,
+    removeCpu,
   };
 }

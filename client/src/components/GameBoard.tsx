@@ -378,6 +378,8 @@ export function GameBoard() {
                 setShowMultiplayerLobby(false);
               }}
               onClose={() => setShowMultiplayerLobby(false)}
+              onAddCpu={multiplayer.addCpu}
+              onRemoveCpu={multiplayer.removeCpu}
               deckColor={localGameState.deckColor}
               targetScore={localGameState.targetScore}
             />

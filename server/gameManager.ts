@@ -13,10 +13,16 @@ interface ConnectedPlayer {
   playerName: string;
 }
 
+interface CpuPlayer {
+  seatIndex: number;
+  playerName: string;
+}
+
 interface GameRoom {
   id: string;
   code: string;
   players: Map<string, ConnectedPlayer>;
+  cpuPlayers: CpuPlayer[];
   gameState: GameState | null;
   deckColor: DeckColor;
   targetScore: number;
@@ -39,10 +45,21 @@ export function initializeWebSocket(server: any): WebSocketServer {
 
   wss.on('connection', (ws: WebSocket) => {
     log('WebSocket client connected', 'ws');
+    
+    (ws as any).isAlive = true;
+    ws.on('pong', () => {
+      (ws as any).isAlive = true;
+    });
 
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
+        
+        if (message.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong' }));
+          return;
+        }
+        
         await handleMessage(ws, message);
       } catch (error) {
         log(`WebSocket error: ${error}`, 'ws');
@@ -58,6 +75,25 @@ export function initializeWebSocket(server: any): WebSocketServer {
       }
       log('WebSocket client disconnected', 'ws');
     });
+  });
+
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws: WebSocket) => {
+      if ((ws as any).isAlive === false) {
+        const player = playerConnections.get(ws);
+        if (player) {
+          handlePlayerDisconnect(player);
+          playerConnections.delete(ws);
+        }
+        return ws.terminate();
+      }
+      (ws as any).isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(heartbeatInterval);
   });
 
   return wss;
@@ -80,13 +116,19 @@ async function handleMessage(ws: WebSocket, message: any) {
     case 'leave_room':
       await handleLeaveRoom(ws);
       break;
+    case 'add_cpu':
+      await handleAddCpu(ws, message);
+      break;
+    case 'remove_cpu':
+      await handleRemoveCpu(ws, message);
+      break;
     default:
       ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type' }));
   }
 }
 
 async function handleCreateRoom(ws: WebSocket, message: any) {
-  const { playerName, deckColor = 'blue', targetScore = 31 } = message;
+  const { playerName, deckColor = 'blue', targetScore = 25 } = message;
   
   let code = generateRoomCode();
   while (rooms.has(code)) {
@@ -100,6 +142,7 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
     id: roomId,
     code,
     players: new Map(),
+    cpuPlayers: [],
     gameState: null,
     deckColor,
     targetScore,
@@ -173,8 +216,19 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     return;
   }
 
-  const takenSeats = Array.from(room.players.values()).map(p => p.seatIndex);
-  const availableSeat = [0, 1, 2, 3].find(seat => !takenSeats.includes(seat));
+  const humanSeats = Array.from(room.players.values()).map(p => p.seatIndex);
+  const cpuSeats = room.cpuPlayers.map(cpu => cpu.seatIndex);
+  
+  let availableSeat = [0, 1, 2, 3].find(seat => !humanSeats.includes(seat) && !cpuSeats.includes(seat));
+  
+  if (availableSeat === undefined) {
+    const cpuSeatToReplace = [0, 1, 2, 3].find(seat => !humanSeats.includes(seat) && cpuSeats.includes(seat));
+    if (cpuSeatToReplace !== undefined) {
+      room.cpuPlayers = room.cpuPlayers.filter(cpu => cpu.seatIndex !== cpuSeatToReplace);
+      availableSeat = cpuSeatToReplace;
+      log(`CPU removed from seat ${cpuSeatToReplace} to make room for human player`, 'ws');
+    }
+  }
   
   if (availableSeat === undefined) {
     ws.send(JSON.stringify({ type: 'error', message: 'Room is full' }));
@@ -227,15 +281,36 @@ async function handleStartGame(ws: WebSocket) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room) return;
 
+  const playerList = getPlayerList(room);
+  if (playerList.length !== 4) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Need exactly 4 players to start' }));
+    return;
+  }
+
   let state = gameEngine.initializeGame(room.deckColor, room.targetScore);
   
   const connectedPlayers = Array.from(room.players.values());
   state.players = state.players.map((p, index) => {
     const connectedPlayer = connectedPlayers.find(cp => cp.seatIndex === index);
+    const cpuPlayer = room.cpuPlayers.find(cpu => cpu.seatIndex === index);
+    
+    if (connectedPlayer) {
+      return {
+        ...p,
+        name: connectedPlayer.playerName,
+        isHuman: true,
+      };
+    } else if (cpuPlayer) {
+      return {
+        ...p,
+        name: cpuPlayer.playerName,
+        isHuman: false,
+      };
+    }
     return {
       ...p,
-      name: connectedPlayer?.playerName || `CPU ${index + 1}`,
-      isHuman: !!connectedPlayer,
+      name: `CPU ${index + 1}`,
+      isHuman: false,
     };
   });
 
@@ -248,10 +323,16 @@ async function handleStartGame(ws: WebSocket) {
 
 async function handlePlayerAction(ws: WebSocket, message: any) {
   const player = playerConnections.get(ws);
-  if (!player) return;
+  if (!player) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Not connected to a room' }));
+    return;
+  }
 
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
-  if (!room || !room.gameState) return;
+  if (!room || !room.gameState) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+    return;
+  }
 
   const phase = room.gameState.phase;
   const isAnyPlayerPhase = phase === 'dealer-draw' || phase === 'purge-draw' || phase === 'scoring' || phase === 'game-over';
@@ -262,6 +343,11 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
   }
 
   const { action, data } = message;
+  
+  if (!action || typeof action !== 'string') {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid action' }));
+    return;
+  }
 
   let newState = room.gameState;
 
@@ -345,6 +431,87 @@ async function handleLeaveRoom(ws: WebSocket) {
   ws.send(JSON.stringify({ type: 'left' }));
 }
 
+async function handleAddCpu(ws: WebSocket, message: any) {
+  const player = playerConnections.get(ws);
+  if (!player) return;
+
+  const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
+  if (!room) return;
+
+  if (player.seatIndex !== 0) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Only the host can add CPU players' }));
+    return;
+  }
+
+  const { seatIndex } = message;
+  
+  if (typeof seatIndex !== 'number' || seatIndex < 0 || seatIndex > 3) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid seat index' }));
+    return;
+  }
+  
+  const takenSeats = [
+    ...Array.from(room.players.values()).map(p => p.seatIndex),
+    ...room.cpuPlayers.map(cpu => cpu.seatIndex),
+  ];
+  
+  if (takenSeats.includes(seatIndex)) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Seat is already taken' }));
+    return;
+  }
+
+  const cpuNames = ['CPU Alpha', 'CPU Beta', 'CPU Gamma', 'CPU Delta'];
+  room.cpuPlayers.push({
+    seatIndex,
+    playerName: cpuNames[seatIndex] || `CPU ${seatIndex + 1}`,
+  });
+
+  broadcastToRoom(room, {
+    type: 'player_joined',
+    seatIndex,
+    playerName: cpuNames[seatIndex],
+    players: getPlayerList(room),
+  });
+
+  log(`CPU added to seat ${seatIndex} in room ${room.code}`, 'ws');
+}
+
+async function handleRemoveCpu(ws: WebSocket, message: any) {
+  const player = playerConnections.get(ws);
+  if (!player) return;
+
+  const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
+  if (!room) return;
+
+  if (player.seatIndex !== 0) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Only the host can remove CPU players' }));
+    return;
+  }
+
+  const { seatIndex } = message;
+  
+  if (typeof seatIndex !== 'number' || seatIndex < 0 || seatIndex > 3) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid seat index' }));
+    return;
+  }
+  
+  const cpuIndex = room.cpuPlayers.findIndex(cpu => cpu.seatIndex === seatIndex);
+  if (cpuIndex === -1) {
+    ws.send(JSON.stringify({ type: 'error', message: 'No CPU at this seat' }));
+    return;
+  }
+
+  room.cpuPlayers.splice(cpuIndex, 1);
+
+  broadcastToRoom(room, {
+    type: 'player_disconnected',
+    seatIndex,
+    players: getPlayerList(room),
+  });
+
+  log(`CPU removed from seat ${seatIndex} in room ${room.code}`, 'ws');
+}
+
 function handlePlayerDisconnect(player: ConnectedPlayer) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room) return;
@@ -364,12 +531,22 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
   }
 }
 
-function getPlayerList(room: GameRoom): { seatIndex: number; playerName: string; connected: boolean }[] {
-  return Array.from(room.players.values()).map(p => ({
+function getPlayerList(room: GameRoom): { seatIndex: number; playerName: string; connected: boolean; isCpu: boolean }[] {
+  const humanPlayers = Array.from(room.players.values()).map(p => ({
     seatIndex: p.seatIndex,
     playerName: p.playerName,
     connected: true,
+    isCpu: false,
   }));
+  
+  const cpuPlayersList = room.cpuPlayers.map(cpu => ({
+    seatIndex: cpu.seatIndex,
+    playerName: cpu.playerName,
+    connected: true,
+    isCpu: true,
+  }));
+  
+  return [...humanPlayers, ...cpuPlayersList].sort((a, b) => a.seatIndex - b.seatIndex);
 }
 
 function filterGameStateForPlayer(state: GameState, seatIndex: number): GameState {

@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Copy, Check, Play, LogOut, Wifi, WifiOff } from 'lucide-react';
+import { Users, Copy, Check, Play, LogOut, Wifi, WifiOff, Bot, UserPlus } from 'lucide-react';
 import type { DeckColor } from '@shared/gameTypes';
 
 interface RoomPlayer {
   seatIndex: number;
   playerName: string;
   connected: boolean;
+  isCpu?: boolean;
 }
 
 interface MultiplayerLobbyProps {
@@ -23,6 +24,8 @@ interface MultiplayerLobbyProps {
   onStartGame: () => void;
   onLeaveRoom: () => void;
   onClose: () => void;
+  onAddCpu: (seatIndex: number) => void;
+  onRemoveCpu: (seatIndex: number) => void;
   deckColor: DeckColor;
   targetScore: number;
 }
@@ -38,6 +41,8 @@ export function MultiplayerLobby({
   onStartGame,
   onLeaveRoom,
   onClose,
+  onAddCpu,
+  onRemoveCpu,
   deckColor,
   targetScore,
 }: MultiplayerLobbyProps) {
@@ -79,6 +84,8 @@ export function MultiplayerLobby({
   if (roomCode) {
     const isHost = seatIndex === 0;
     const allSeatsReady = players.length === 4;
+    const humanCount = players.filter(p => !p.isCpu).length;
+    const canStart = humanCount >= 1 && allSeatsReady;
 
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -141,16 +148,42 @@ export function MultiplayerLobby({
                       </Badge>
                     </div>
                     {player ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate">
-                          {player.playerName}
-                        </span>
-                        {player.connected ? (
-                          <Wifi className="w-3 h-3 text-green-500 shrink-0" />
-                        ) : (
-                          <WifiOff className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {player.isCpu ? (
+                            <Bot className="w-3 h-3 text-muted-foreground shrink-0" />
+                          ) : player.connected ? (
+                            <Wifi className="w-3 h-3 text-green-500 shrink-0" />
+                          ) : (
+                            <WifiOff className="w-3 h-3 text-muted-foreground shrink-0" />
+                          )}
+                          <span className="text-sm font-medium truncate">
+                            {player.playerName}
+                          </span>
+                        </div>
+                        {player.isCpu && isHost && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => onRemoveCpu(seat)}
+                            data-testid={`button-remove-cpu-${seat}`}
+                          >
+                            <LogOut className="w-3 h-3" />
+                          </Button>
                         )}
                       </div>
+                    ) : isHost ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full h-7 text-xs"
+                        onClick={() => onAddCpu(seat)}
+                        data-testid={`button-add-cpu-${seat}`}
+                      >
+                        <UserPlus className="w-3 h-3 mr-1" />
+                        Add CPU
+                      </Button>
                     ) : (
                       <span className="text-sm text-muted-foreground">
                         Waiting...
@@ -170,12 +203,12 @@ export function MultiplayerLobby({
             {isHost && (
               <Button
                 onClick={onStartGame}
-                disabled={!allSeatsReady}
+                disabled={!canStart}
                 className="flex-1"
                 data-testid="button-start-online-game"
               >
                 <Play className="w-4 h-4 mr-2" />
-                {allSeatsReady ? 'Start Game' : `Need ${4 - players.length} more`}
+                {canStart ? 'Start Game' : `Fill ${4 - players.length} seats`}
               </Button>
             )}
             <Button
@@ -187,9 +220,9 @@ export function MultiplayerLobby({
             </Button>
           </div>
 
-          {!allSeatsReady && (
+          {!allSeatsReady && isHost && (
             <p className="text-xs text-center text-muted-foreground">
-              Empty seats will be filled by CPU players when the game starts
+              Add CPU players to fill empty seats, or wait for friends to join
             </p>
           )}
         </CardContent>
