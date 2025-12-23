@@ -196,10 +196,10 @@ function getSuitColor(suit: CardType['suit']): string {
     case 'Hearts':
       return 'text-red-500 dark:text-red-400';
     case 'Diamonds':
-      return 'text-red-500 dark:text-red-400';
+      return 'text-blue-500 dark:text-blue-400';
     case 'Clubs':
-      return 'text-slate-700 dark:text-slate-200';
+      return 'text-emerald-600 dark:text-emerald-400';
     case 'Spades':
-      return 'text-slate-700 dark:text-slate-200';
+      return 'text-slate-800 dark:text-slate-100';
   }
 }

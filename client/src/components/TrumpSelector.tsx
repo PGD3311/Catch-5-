@@ -11,9 +11,9 @@ interface TrumpSelectorProps {
 
 const suitConfig = {
   Hearts: { Icon: Heart, color: 'text-red-500', bgHover: 'hover:bg-red-50 dark:hover:bg-red-950/30' },
-  Diamonds: { Icon: Diamond, color: 'text-red-500', bgHover: 'hover:bg-red-50 dark:hover:bg-red-950/30' },
-  Clubs: { Icon: Club, color: 'text-slate-900 dark:text-slate-100', bgHover: 'hover:bg-slate-100 dark:hover:bg-slate-800' },
-  Spades: { Icon: Spade, color: 'text-slate-900 dark:text-slate-100', bgHover: 'hover:bg-slate-100 dark:hover:bg-slate-800' },
+  Diamonds: { Icon: Diamond, color: 'text-blue-500', bgHover: 'hover:bg-blue-50 dark:hover:bg-blue-950/30' },
+  Clubs: { Icon: Club, color: 'text-emerald-600 dark:text-emerald-400', bgHover: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/30' },
+  Spades: { Icon: Spade, color: 'text-slate-800 dark:text-slate-100', bgHover: 'hover:bg-slate-100 dark:hover:bg-slate-800' },
 };
 
 export function TrumpSelector({ open, onSelect }: TrumpSelectorProps) {
