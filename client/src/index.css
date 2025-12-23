@@ -88,53 +88,53 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255,255,255, .12);
+  --badge-outline: rgba(255,255,255, .08);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-  --background: 0 0% 9%;
-  --foreground: 0 0% 98%;
-  --border: 0 0% 18%;
-  --card: 0 0% 11%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 0 0% 14%;
-  --sidebar: 0 0% 13%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 16%;
-  --sidebar-primary: 142 76% 36%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 17%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 142 76% 36%;
-  --popover: 0 0% 15%;
-  --popover-foreground: 0 0% 98%;
-  --popover-border: 0 0% 18%;
-  --primary: 142 76% 36%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 19%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 3% 19%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 142 10% 18%;
-  --accent-foreground: 142 76% 70%;
-  --destructive: 0 62% 30%;
+  --elevate-1: rgba(255,255,255, .05);
+  --elevate-2: rgba(255,255,255, .12);
+  --background: 160 20% 6%;
+  --foreground: 45 20% 95%;
+  --border: 160 15% 15%;
+  --card: 160 18% 9%;
+  --card-foreground: 45 20% 95%;
+  --card-border: 160 15% 12%;
+  --sidebar: 160 20% 8%;
+  --sidebar-foreground: 45 20% 95%;
+  --sidebar-border: 160 15% 12%;
+  --sidebar-primary: 45 80% 55%;
+  --sidebar-primary-foreground: 160 30% 8%;
+  --sidebar-accent: 160 15% 14%;
+  --sidebar-accent-foreground: 45 20% 95%;
+  --sidebar-ring: 45 80% 55%;
+  --popover: 160 18% 11%;
+  --popover-foreground: 45 20% 95%;
+  --popover-border: 160 15% 16%;
+  --primary: 45 80% 55%;
+  --primary-foreground: 160 30% 8%;
+  --secondary: 160 12% 16%;
+  --secondary-foreground: 45 20% 95%;
+  --muted: 160 10% 15%;
+  --muted-foreground: 45 10% 60%;
+  --accent: 160 20% 14%;
+  --accent-foreground: 45 80% 65%;
+  --destructive: 0 62% 40%;
   --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 30%;
-  --ring: 142 76% 36%;
-  --chart-1: 142 70% 65%;
-  --chart-2: 197 65% 70%;
-  --chart-3: 271 75% 75%;
-  --chart-4: 32 90% 70%;
-  --chart-5: 346 70% 72%;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 2px 4px -1px hsl(0 0% 0% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 4px 6px -1px hsl(0 0% 0% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
+  --input: 160 12% 22%;
+  --ring: 45 80% 55%;
+  --chart-1: 45 80% 60%;
+  --chart-2: 160 50% 50%;
+  --chart-3: 280 60% 65%;
+  --chart-4: 20 85% 60%;
+  --chart-5: 350 70% 60%;
+  --shadow-2xs: 0px 2px 4px 0px hsl(0 0% 0% / 0.20);
+  --shadow-xs: 0px 2px 6px 0px hsl(0 0% 0% / 0.25);
+  --shadow-sm: 0px 2px 4px 0px hsl(0 0% 0% / 0.20), 0px 1px 2px -1px hsl(0 0% 0% / 0.15);
+  --shadow: 0px 4px 8px 0px hsl(0 0% 0% / 0.25), 0px 2px 4px -1px hsl(0 0% 0% / 0.15);
+  --shadow-md: 0px 6px 12px 0px hsl(0 0% 0% / 0.30), 0px 3px 6px -1px hsl(0 0% 0% / 0.20);
+  --shadow-lg: 0px 8px 16px 0px hsl(0 0% 0% / 0.35), 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+  --shadow-xl: 0px 12px 24px 0px hsl(0 0% 0% / 0.40), 0px 6px 12px -1px hsl(0 0% 0% / 0.30);
+  --shadow-2xl: 0px 16px 32px 0px hsl(0 0% 0% / 0.45);
 
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
@@ -173,6 +173,28 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+.game-table {
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 0%, hsl(var(--background)) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-blend-mode: normal, soft-light;
+}
+
+.dark .game-table {
+  background-image:
+    radial-gradient(ellipse at 50% 30%, hsl(160 25% 10% / 0.8) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, transparent 0%, hsl(var(--background)) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-blend-mode: normal, normal, overlay;
+}
+
+.gold-text {
+  background: linear-gradient(135deg, hsl(45 80% 55%) 0%, hsl(45 90% 70%) 50%, hsl(45 80% 55%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /**

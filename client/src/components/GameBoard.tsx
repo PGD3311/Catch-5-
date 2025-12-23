@@ -199,7 +199,7 @@ export function GameBoard() {
     gameState.teams.find(t => t.id === player.teamId)!;
 
   return (
-    <div className="flex flex-col min-h-screen bg-background" data-testid="game-board">
+    <div className="flex flex-col min-h-screen bg-background game-table" data-testid="game-board">
       <GameHeader 
         gameState={gameState} 
         onSettingsClick={() => setSettingsOpen(true)}
@@ -208,31 +208,44 @@ export function GameBoard() {
       />
 
       {gameState.phase === 'setup' && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-5xl font-bold tracking-tight">Catch 5</h1>
-            <p className="text-lg text-muted-foreground max-w-md">
-              A 2v2 trick-taking card game. First team to {gameState.targetScore} points wins!
-            </p>
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-              <p>You and your Partner vs. the Opponents</p>
-              <p className="text-xs">
-                Dealer rotates each round. Left of dealer bids first.
+        <div className="flex-1 flex flex-col items-center justify-center gap-10 p-8">
+          <div className="text-center space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-6xl font-bold tracking-tight gold-text dark:gold-text">
+                Catch 5
+              </h1>
+              <p className="text-sm uppercase tracking-widest text-muted-foreground">
+                Classic Trick-Taking Card Game
               </p>
             </div>
+            <div className="max-w-sm mx-auto space-y-3">
+              <p className="text-lg text-foreground/80">
+                Team up with your partner to capture tricks and reach {gameState.targetScore} points first!
+              </p>
+              <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+                <span>2v2 Teams</span>
+                <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
+                <span>Bid 5-9</span>
+                <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
+                <span>Trump Suits</span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <Button size="lg" onClick={handleStartGame} data-testid="button-start-game">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button size="lg" onClick={handleStartGame} className="px-8" data-testid="button-start-game">
               Deal Cards
             </Button>
             <Button size="lg" variant="outline" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
               How to Play
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Open Settings to configure players and deck colors
+          </p>
         </div>
       )}
 
-      {gameState.phase !== 'setup' && (
+      {gameState.phase !== 'setup' && gameState.phase !== 'dealer-draw' && (
         <div className="flex-1 flex flex-col p-4 md:p-6 gap-4">
           <div className="flex justify-center">
             <PlayerArea
