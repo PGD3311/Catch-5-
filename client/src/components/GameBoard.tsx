@@ -7,6 +7,7 @@ import { TrumpSelector } from './TrumpSelector';
 import { ScoreModal } from './ScoreModal';
 import { SettingsPanel } from './SettingsPanel';
 import { RulesModal } from './RulesModal';
+import { ActionPrompt } from './ActionPrompt';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -94,11 +95,13 @@ export function GameBoard() {
         const timer = setTimeout(() => {
           const allOthersPassed = gameState.players
             .filter((_, i) => i !== gameState.currentPlayerIndex)
-            .every(p => p.bid === 0);
+            .every(p => p.bid === 0 || p.bid === null);
+          const passedCount = gameState.players.filter(p => p.bid === 0).length;
           const isDealer = gameState.currentPlayerIndex === gameState.dealerIndex;
-          const cpuBid = getCpuBid(currentPlayer.hand, gameState.highBid, isDealer, allOthersPassed);
+          const isLastAndAllPassed = isDealer && passedCount === 3;
+          const cpuBid = getCpuBid(currentPlayer.hand, gameState.highBid, isDealer, isLastAndAllPassed);
           setGameState(prev => processBid(prev, cpuBid));
-        }, 800);
+        }, 1200);
         return () => clearTimeout(timer);
       }
     }
@@ -134,10 +137,12 @@ export function GameBoard() {
     .filter(p => p.bid !== null)
     .every(p => p.bid === 0);
   const isDealer = gameState.currentPlayerIndex === gameState.dealerIndex;
+  const passedCount = gameState.players.filter(p => p.bid === 0).length;
   
   const showBiddingModal = gameState.phase === 'bidding' && isHumanTurn;
   const showTrumpSelector = gameState.phase === 'trump-selection';
   const showScoreModal = gameState.phase === 'scoring' || gameState.phase === 'game-over';
+  const showBidResults = gameState.phase === 'bidding' || gameState.phase === 'trump-selection';
 
   const getTeamForPlayer = (player: typeof humanPlayer) => 
     gameState.teams.find(t => t.id === player.teamId)!;
@@ -153,13 +158,16 @@ export function GameBoard() {
             <p className="text-lg text-muted-foreground max-w-md">
               A 2v2 trick-taking card game. First team to {gameState.targetScore} points wins!
             </p>
-            <p className="text-sm text-muted-foreground">
-              You and your Partner vs. the Opponents
-            </p>
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+              <p>You and your Partner vs. the Opponents</p>
+              <p className="text-xs">
+                Dealer rotates each round. Left of dealer bids first.
+              </p>
+            </div>
           </div>
           <div className="flex gap-4">
             <Button size="lg" onClick={handleStartGame} data-testid="button-start-game">
-              Start Game
+              Deal Cards
             </Button>
             <Button size="lg" variant="outline" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
               How to Play
@@ -176,8 +184,10 @@ export function GameBoard() {
               team={getTeamForPlayer(partnerPlayer)}
               isCurrentPlayer={gameState.currentPlayerIndex === 2}
               isBidder={gameState.bidderId === partnerPlayer.id}
+              isDealer={gameState.dealerIndex === 2}
               deckColor={gameState.deckColor}
               position="top"
+              showBidResult={showBidResults}
             />
           </div>
 
@@ -187,12 +197,18 @@ export function GameBoard() {
               team={getTeamForPlayer(opponent1)}
               isCurrentPlayer={gameState.currentPlayerIndex === 1}
               isBidder={gameState.bidderId === opponent1.id}
+              isDealer={gameState.dealerIndex === 1}
               deckColor={gameState.deckColor}
               position="left"
+              showBidResult={showBidResults}
             />
 
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-4">
               <TrickArea currentTrick={gameState.currentTrick} players={gameState.players} />
+              
+              {(gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'playing') && (
+                <ActionPrompt gameState={gameState} />
+              )}
             </div>
 
             <PlayerArea
@@ -200,8 +216,10 @@ export function GameBoard() {
               team={getTeamForPlayer(opponent2)}
               isCurrentPlayer={gameState.currentPlayerIndex === 3}
               isBidder={gameState.bidderId === opponent2.id}
+              isDealer={gameState.dealerIndex === 3}
               deckColor={gameState.deckColor}
               position="right"
+              showBidResult={showBidResults}
             />
           </div>
 
@@ -211,11 +229,13 @@ export function GameBoard() {
               team={getTeamForPlayer(humanPlayer)}
               isCurrentPlayer={gameState.currentPlayerIndex === 0}
               isBidder={gameState.bidderId === humanPlayer.id}
+              isDealer={gameState.dealerIndex === 0}
               deckColor={gameState.deckColor}
               onCardClick={handleCardPlay}
               canPlayCard={(card) => canPlayCard(card, humanPlayer.hand, gameState.currentTrick)}
               position="bottom"
               showCards
+              showBidResult={showBidResults}
             />
           </div>
         </div>
@@ -226,7 +246,7 @@ export function GameBoard() {
         highBid={gameState.highBid}
         playerName={humanPlayer.name}
         isDealer={isDealer}
-        allOthersPassed={allOthersPassed && gameState.players.filter(p => p.bid !== null).length === 3}
+        allOthersPassed={passedCount === 3}
         onBid={handleBid}
       />
 

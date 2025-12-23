@@ -2,18 +2,20 @@ import { Player, DeckColor, Card as CardType, Team } from '@shared/gameTypes';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { User, Bot, Crown, Users } from 'lucide-react';
+import { User, Bot, Crown, Users, CircleDot } from 'lucide-react';
 
 interface PlayerAreaProps {
   player: Player;
   team: Team;
   isCurrentPlayer: boolean;
   isBidder: boolean;
+  isDealer: boolean;
   deckColor: DeckColor;
   onCardClick?: (card: CardType) => void;
   canPlayCard?: (card: CardType) => boolean;
   position: 'bottom' | 'top' | 'left' | 'right';
   showCards?: boolean;
+  showBidResult?: boolean;
 }
 
 export function PlayerArea({
@@ -21,11 +23,13 @@ export function PlayerArea({
   team,
   isCurrentPlayer,
   isBidder,
+  isDealer,
   deckColor,
   onCardClick,
   canPlayCard,
   position,
   showCards = false,
+  showBidResult = false,
 }: PlayerAreaProps) {
   const isBottom = position === 'bottom';
   const isTop = position === 'top';
@@ -51,12 +55,28 @@ export function PlayerArea({
     <div className={getContainerClasses()} data-testid={`player-area-${player.id}`}>
       <div
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg',
-          'bg-card border border-card-border',
-          isCurrentPlayer && 'ring-2 ring-primary animate-pulse',
+          'relative flex items-center gap-2 px-3 py-2 rounded-lg',
+          'bg-card border',
+          isCurrentPlayer 
+            ? 'border-primary ring-2 ring-primary/50 shadow-lg shadow-primary/20' 
+            : 'border-card-border',
           isSide ? 'flex-col text-center' : 'flex-row'
         )}
       >
+        {isDealer && (
+          <div 
+            className={cn(
+              'absolute -top-2 -right-2 w-6 h-6 rounded-full',
+              'bg-amber-500 text-white flex items-center justify-center',
+              'text-[10px] font-bold shadow-md border-2 border-white dark:border-background'
+            )}
+            title="Dealer"
+            data-testid={`dealer-chip-${player.id}`}
+          >
+            D
+          </div>
+        )}
+        
         <div className="flex items-center gap-2">
           {player.isHuman ? (
             <User className="w-5 h-5 text-muted-foreground" />
@@ -64,8 +84,9 @@ export function PlayerArea({
             <Bot className="w-5 h-5 text-muted-foreground" />
           )}
           <span className="font-semibold text-sm">{player.name}</span>
-          {isBidder && <Crown className="w-4 h-4 text-amber-500" />}
+          {isBidder && <Crown className="w-4 h-4 text-amber-500" title="Bid Winner" />}
         </div>
+        
         <div className="flex items-center gap-2 flex-wrap">
           <Badge 
             variant={isYourTeam ? 'default' : 'secondary'} 
@@ -73,14 +94,25 @@ export function PlayerArea({
             data-testid={`team-badge-${player.id}`}
           >
             <Users className="w-3 h-3 mr-1" />
-            {team.name}: {team.score}
+            {team.name}
           </Badge>
-          {player.bid !== null && player.bid > 0 && (
-            <Badge variant="outline" className="text-xs">
-              Bid: {player.bid}
+          
+          {showBidResult && player.bid !== null && (
+            <Badge 
+              variant={player.bid > 0 ? 'outline' : 'secondary'} 
+              className="text-xs"
+              data-testid={`bid-result-${player.id}`}
+            >
+              {player.bid === 0 ? 'Passed' : `Bid ${player.bid}`}
             </Badge>
           )}
         </div>
+
+        {isCurrentPlayer && (
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+            <CircleDot className="w-3 h-3 text-primary animate-pulse" />
+          </div>
+        )}
       </div>
 
       <div className={getHandClasses()}>
