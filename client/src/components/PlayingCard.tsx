@@ -47,7 +47,8 @@ export function PlayingCard({
   trumpSuit,
 }: PlayingCardProps) {
   const isTrump = card && trumpSuit && card.suit === trumpSuit;
-  const deckGradient = DECK_COLORS.find(d => d.value === deckColor)?.gradient || 'from-blue-600 to-blue-900';
+  const deckColorData = DECK_COLORS.find(d => d.value === deckColor);
+  const cssGradient = deckColorData?.cssGradient || 'linear-gradient(135deg, #2563eb, #1e3a8a)';
 
   const baseSize = small ? 'w-14 h-20' : 'w-20 h-28';
   const fontSize = small ? 'text-xs' : 'text-base';
@@ -66,10 +67,10 @@ export function PlayingCard({
           className
         )}
       >
-        <div className={cn(
-          'absolute inset-0 bg-gradient-to-br',
-          deckGradient
-        )} />
+        <div 
+          className="absolute inset-0"
+          style={{ background: cssGradient }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-black/20" />
         <div className="absolute inset-[3px] rounded-lg border border-white/30 dark:border-white/20 flex items-center justify-center">
           <div className="w-3/4 h-3/4 rounded-md border border-white/20 bg-white/5 flex items-center justify-center backdrop-blur-[1px]">

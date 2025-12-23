@@ -79,19 +79,19 @@ export const RANK_ORDER_ACE_LOW: Record<Rank, number> = {
   '9': 8, '10': 9, 'J': 10, 'Q': 11, 'K': 12
 };
 
-export const DECK_COLORS: { value: DeckColor; label: string; gradient: string }[] = [
-  { value: 'red', label: 'Classic Red', gradient: 'from-red-700 to-red-900' },
-  { value: 'blue', label: 'Royal Blue', gradient: 'from-blue-600 to-blue-900' },
-  { value: 'green', label: 'Forest Green', gradient: 'from-emerald-600 to-emerald-900' },
-  { value: 'purple', label: 'Royal Purple', gradient: 'from-purple-600 to-purple-900' },
-  { value: 'gold', label: 'Golden', gradient: 'from-amber-500 to-amber-700' },
-  { value: 'black', label: 'Midnight', gradient: 'from-slate-700 to-slate-900' },
-  { value: 'teal', label: 'Ocean Teal', gradient: 'from-teal-500 to-teal-800' },
-  { value: 'rose', label: 'Rose Pink', gradient: 'from-rose-500 to-rose-800' },
-  { value: 'orange', label: 'Sunset', gradient: 'from-orange-500 to-orange-800' },
-  { value: 'indigo', label: 'Deep Indigo', gradient: 'from-indigo-500 to-indigo-900' },
-  { value: 'crimson', label: 'Crimson', gradient: 'from-red-600 to-rose-900' },
-  { value: 'navy', label: 'Navy', gradient: 'from-blue-800 to-slate-900' },
+export const DECK_COLORS: { value: DeckColor; label: string; gradient: string; cssGradient: string }[] = [
+  { value: 'red', label: 'Classic Red', gradient: 'from-red-700 to-red-900', cssGradient: 'linear-gradient(135deg, #b91c1c, #7f1d1d)' },
+  { value: 'blue', label: 'Royal Blue', gradient: 'from-blue-600 to-blue-900', cssGradient: 'linear-gradient(135deg, #2563eb, #1e3a8a)' },
+  { value: 'green', label: 'Forest Green', gradient: 'from-emerald-600 to-emerald-900', cssGradient: 'linear-gradient(135deg, #059669, #064e3b)' },
+  { value: 'purple', label: 'Royal Purple', gradient: 'from-purple-600 to-purple-900', cssGradient: 'linear-gradient(135deg, #9333ea, #581c87)' },
+  { value: 'gold', label: 'Golden', gradient: 'from-amber-500 to-amber-700', cssGradient: 'linear-gradient(135deg, #f59e0b, #b45309)' },
+  { value: 'black', label: 'Midnight', gradient: 'from-slate-700 to-slate-900', cssGradient: 'linear-gradient(135deg, #334155, #0f172a)' },
+  { value: 'teal', label: 'Ocean Teal', gradient: 'from-teal-500 to-teal-800', cssGradient: 'linear-gradient(135deg, #14b8a6, #115e59)' },
+  { value: 'rose', label: 'Rose Pink', gradient: 'from-rose-500 to-rose-800', cssGradient: 'linear-gradient(135deg, #f43f5e, #9f1239)' },
+  { value: 'orange', label: 'Sunset', gradient: 'from-orange-500 to-orange-800', cssGradient: 'linear-gradient(135deg, #f97316, #9a3412)' },
+  { value: 'indigo', label: 'Deep Indigo', gradient: 'from-indigo-500 to-indigo-900', cssGradient: 'linear-gradient(135deg, #6366f1, #312e81)' },
+  { value: 'crimson', label: 'Crimson', gradient: 'from-red-600 to-rose-900', cssGradient: 'linear-gradient(135deg, #dc2626, #881337)' },
+  { value: 'navy', label: 'Navy', gradient: 'from-blue-800 to-slate-900', cssGradient: 'linear-gradient(135deg, #1e40af, #0f172a)' },
 ];
 
 export const MIN_BID = 5;

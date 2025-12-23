@@ -110,10 +110,10 @@ export function SettingsPanel({
                 <button
                   key={color.value}
                   onClick={() => onDeckColorChange(color.value)}
+                  style={{ background: color.cssGradient }}
                   className={cn(
                     'w-full aspect-[3/4] rounded-lg',
-                    'bg-gradient-to-br shadow-md',
-                    color.gradient,
+                    'shadow-md',
                     'transition-all duration-200',
                     'border-2',
                     deckColor === color.value
