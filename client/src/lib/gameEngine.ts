@@ -160,50 +160,105 @@ export function dealCards(state: GameState): GameState {
   };
 }
 
+function evaluateSuitStrength(hand: Card[], suit: Suit): { 
+  trumpCount: number; 
+  hasAce: boolean; 
+  hasFive: boolean; 
+  hasJack: boolean; 
+  hasDeuce: boolean;
+  hasKing: boolean;
+  hasQueen: boolean;
+  pointsAvailable: number;
+  estimatedBid: number;
+} {
+  const suitCards = hand.filter(c => c.suit === suit);
+  const trumpCount = suitCards.length;
+  const hasAce = suitCards.some(c => c.rank === 'A');
+  const hasFive = suitCards.some(c => c.rank === '5');
+  const hasJack = suitCards.some(c => c.rank === 'J');
+  const hasDeuce = suitCards.some(c => c.rank === '2');
+  const hasKing = suitCards.some(c => c.rank === 'K');
+  const hasQueen = suitCards.some(c => c.rank === 'Q');
+  
+  let pointsAvailable = 0;
+  if (hasFive) pointsAvailable += 5;
+  if (hasJack) pointsAvailable += 1;
+  if (hasDeuce) pointsAvailable += 1;
+  if (hasAce) pointsAvailable += 1;
+  
+  let estimatedBid = 0;
+  
+  if (trumpCount === 0) {
+    estimatedBid = 0;
+  } else if (trumpCount === 1) {
+    if (hasFive) estimatedBid = 5;
+    else if (hasAce) estimatedBid = 5;
+    else estimatedBid = 0;
+  } else if (trumpCount === 2) {
+    if (hasAce && hasFive) estimatedBid = 7;
+    else if (hasAce) estimatedBid = 6;
+    else if (hasFive) estimatedBid = 5;
+    else estimatedBid = 5;
+  } else if (trumpCount === 3) {
+    if (hasAce && hasFive) estimatedBid = 8;
+    else if (hasAce) estimatedBid = 7;
+    else if (hasFive) estimatedBid = 6;
+    else estimatedBid = 5;
+  } else if (trumpCount >= 4) {
+    if (hasAce && hasFive) estimatedBid = 9;
+    else if (hasAce) estimatedBid = 8;
+    else if (hasFive) estimatedBid = 7;
+    else estimatedBid = 6;
+  }
+  
+  if (hasKing && hasAce) estimatedBid = Math.min(9, estimatedBid + 1);
+  if (hasJack || hasDeuce) estimatedBid = Math.min(9, estimatedBid + 1);
+  
+  if (!hasAce && estimatedBid >= 8) {
+    estimatedBid = 7;
+  }
+  
+  return { trumpCount, hasAce, hasFive, hasJack, hasDeuce, hasKing, hasQueen, pointsAvailable, estimatedBid };
+}
+
 export function getCpuBid(hand: Card[], highBid: number, isDealer: boolean, allPassed: boolean): number {
   if (isDealer && allPassed) {
     return MIN_BID;
   }
 
-  const suitCounts: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
-  const suitStrength: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
-
-  for (const card of hand) {
-    suitCounts[card.suit]++;
-    if (card.rank === '5') {
-      suitStrength[card.suit] += 5;
-    } else if (card.rank === 'A') {
-      suitStrength[card.suit] += 3;
-    } else if (card.rank === 'J') {
-      suitStrength[card.suit] += 2;
-    } else if (card.rank === 'K' || card.rank === 'Q') {
-      suitStrength[card.suit] += 1;
+  const suits: Suit[] = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+  let bestSuitStrength = { estimatedBid: 0 } as ReturnType<typeof evaluateSuitStrength>;
+  
+  for (const suit of suits) {
+    const strength = evaluateSuitStrength(hand, suit);
+    if (strength.estimatedBid > bestSuitStrength.estimatedBid) {
+      bestSuitStrength = strength;
     }
   }
-
-  let bestScore = 0;
-  for (const suit of Object.keys(suitCounts) as Suit[]) {
-    const score = suitCounts[suit] * 2 + suitStrength[suit];
-    if (score > bestScore) {
-      bestScore = score;
-    }
+  
+  const myBidStrength = bestSuitStrength.estimatedBid;
+  
+  if (myBidStrength === 0) {
+    return 0;
   }
-
-  const trumpPotential = Math.min(MAX_BID, Math.max(MIN_BID, Math.floor(bestScore / 2)));
-
+  
   if (isDealer) {
-    if (highBid === MAX_BID && trumpPotential >= highBid) {
+    if (highBid === MAX_BID && myBidStrength >= MAX_BID) {
       return MAX_BID;
     }
-    if (trumpPotential > highBid) {
+    if (myBidStrength > highBid) {
       return highBid + 1;
     }
     return 0;
   }
-
-  if (trumpPotential > highBid && Math.random() > 0.3) {
-    return trumpPotential;
+  
+  if (myBidStrength > highBid) {
+    const bidConfidence = (myBidStrength - highBid) / 4;
+    if (Math.random() < 0.5 + bidConfidence) {
+      return myBidStrength;
+    }
   }
+  
   return 0;
 }
 
