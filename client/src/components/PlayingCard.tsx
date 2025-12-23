@@ -29,10 +29,16 @@ const SuitIcon = ({ suit, className }: { suit: Card['suit']; className?: string 
 };
 
 const getSuitColor = (suit: Card['suit']): string => {
-  if (suit === 'Hearts' || suit === 'Diamonds') {
-    return 'text-red-600 dark:text-red-500';
+  switch (suit) {
+    case 'Hearts':
+      return 'text-red-600 dark:text-red-500';
+    case 'Diamonds':
+      return 'text-blue-600 dark:text-blue-400';
+    case 'Clubs':
+      return 'text-emerald-600 dark:text-emerald-400';
+    case 'Spades':
+      return 'text-slate-900 dark:text-slate-100';
   }
-  return 'text-slate-900 dark:text-slate-100';
 };
 
 export function PlayingCard({
@@ -50,10 +56,10 @@ export function PlayingCard({
   const deckColorData = DECK_COLORS.find(d => d.value === deckColor);
   const cssGradient = deckColorData?.cssGradient || 'linear-gradient(135deg, #2563eb, #1e3a8a)';
 
-  const baseSize = small ? 'w-14 h-20' : 'w-20 h-28';
-  const fontSize = small ? 'text-xs' : 'text-base';
-  const iconSize = small ? 'w-3 h-3' : 'w-4 h-4';
-  const centerIconSize = small ? 'w-6 h-6' : 'w-12 h-12';
+  const baseSize = small ? 'w-16 h-22' : 'w-24 h-34';
+  const fontSize = small ? 'text-sm' : 'text-lg';
+  const iconSize = small ? 'w-3.5 h-3.5' : 'w-5 h-5';
+  const centerIconSize = small ? 'w-8 h-8' : 'w-14 h-14';
 
   if (faceDown) {
     return (
@@ -89,7 +95,6 @@ export function PlayingCard({
   if (!card) return null;
 
   const suitColor = getSuitColor(card.suit);
-  const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds';
 
   return (
     <button
@@ -144,7 +149,10 @@ export function PlayingCard({
           <SuitIcon suit={card.suit} className={cn(centerIconSize, 'drop-shadow-md')} />
           <div className={cn(
             'absolute inset-0 blur-md opacity-30',
-            isRed ? 'bg-red-500' : 'bg-slate-600 dark:bg-slate-300'
+            card.suit === 'Hearts' && 'bg-red-500',
+            card.suit === 'Diamonds' && 'bg-blue-500',
+            card.suit === 'Clubs' && 'bg-emerald-500',
+            card.suit === 'Spades' && 'bg-slate-600 dark:bg-slate-300'
           )} />
         </div>
       </div>
