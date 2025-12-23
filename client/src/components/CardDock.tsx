@@ -194,12 +194,12 @@ function SuitIcon({ suit, className }: { suit: CardType['suit']; className?: str
 function getSuitColor(suit: CardType['suit']): string {
   switch (suit) {
     case 'Hearts':
-      return 'text-red-600 dark:text-red-500';
+      return 'text-red-500 dark:text-red-400';
     case 'Diamonds':
-      return 'text-blue-600 dark:text-blue-400';
+      return 'text-red-500 dark:text-red-400';
     case 'Clubs':
-      return 'text-emerald-600 dark:text-emerald-400';
+      return 'text-slate-700 dark:text-slate-200';
     case 'Spades':
-      return 'text-slate-900 dark:text-slate-100';
+      return 'text-slate-700 dark:text-slate-200';
   }
 }

@@ -31,13 +31,13 @@ const SuitIcon = ({ suit, className }: { suit: Card['suit']; className?: string 
 const getSuitColor = (suit: Card['suit']): string => {
   switch (suit) {
     case 'Hearts':
-      return 'text-red-600 dark:text-red-500';
+      return 'text-red-500 dark:text-red-400';
     case 'Diamonds':
-      return 'text-blue-600 dark:text-blue-400';
+      return 'text-red-500 dark:text-red-400';
     case 'Clubs':
-      return 'text-emerald-600 dark:text-emerald-400';
+      return 'text-slate-700 dark:text-slate-200';
     case 'Spades':
-      return 'text-slate-900 dark:text-slate-100';
+      return 'text-slate-700 dark:text-slate-200';
   }
 };
 
@@ -150,8 +150,8 @@ export function PlayingCard({
           <div className={cn(
             'absolute inset-0 blur-md opacity-30',
             card.suit === 'Hearts' && 'bg-red-500',
-            card.suit === 'Diamonds' && 'bg-blue-500',
-            card.suit === 'Clubs' && 'bg-emerald-500',
+            card.suit === 'Diamonds' && 'bg-red-500',
+            card.suit === 'Clubs' && 'bg-slate-600 dark:bg-slate-300',
             card.suit === 'Spades' && 'bg-slate-600 dark:bg-slate-300'
           )} />
         </div>
