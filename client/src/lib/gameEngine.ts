@@ -511,24 +511,74 @@ export function getCpuCardToPlay(
 
   if (followCards.length > 0) {
     const myPointCards = getMyPointCards();
+    // Safe cards: non-point cards OR Ace (Ace is worth fighting for High)
     const safeFollowCards = followCards.filter(c => !POINT_RANKS.includes(c.rank) || c.rank === 'A');
+    // Cards we should NEVER throw away if we can help it: 5, J, 2
+    const valuablePointCards = followCards.filter(c => c.rank === '5' || c.rank === 'J' || c.rank === '2');
     
-    if (leadSuit === trumpSuit && myPointCards.length > 0) {
-      if (safeFollowCards.length > 0) {
-        if (currentWinner && !teammateIsWinning) {
-          const winningCards = safeFollowCards.filter(c => RANK_ORDER[c.rank] > RANK_ORDER[currentWinner.card.rank]);
-          if (winningCards.length > 0) {
-            return winningCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
-          }
+    if (leadSuit === trumpSuit) {
+      // Following trump suit - be careful with point cards!
+      
+      // If opponent is winning, try to beat them with safe cards first
+      if (currentWinner && !teammateIsWinning) {
+        // Can we win with a non-point card?
+        const winningCards = safeFollowCards.filter(c => RANK_ORDER[c.rank] > RANK_ORDER[currentWinner.card.rank]);
+        if (winningCards.length > 0) {
+          // Use lowest winning card
+          return winningCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
         }
+        
+        // Can't win - play lowest non-point trump to minimize loss
+        if (safeFollowCards.length > 0) {
+          return safeFollowCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
+        }
+        
+        // Only have point cards left - play the lowest value one (2 is worth less than J, J is worth less than 5)
+        // Priority: play 2 before J, play J before 5 (5 is most valuable)
+        if (valuablePointCards.length > 0) {
+          const deuceCard = valuablePointCards.find(c => c.rank === '2');
+          const jackCard = valuablePointCards.find(c => c.rank === 'J');
+          const fiveCard = valuablePointCards.find(c => c.rank === '5');
+          // 2 is least valuable point card, then J, then 5
+          if (deuceCard) return deuceCard;
+          if (jackCard) return jackCard;
+          if (fiveCard) return fiveCard;
+        }
+      }
+      
+      // Teammate is winning or we're in a good position
+      if (safeFollowCards.length > 0) {
+        // Play lowest safe card
         return safeFollowCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
       }
-      if (hasAceOfTrump) {
-        const aceCard = followCards.find(c => c.rank === 'A');
-        if (aceCard) return aceCard;
+      
+      // Only point cards left - if teammate winning, safe to drop. Otherwise play lowest value.
+      if (teammateIsWinning && opponentsAfterMe.length === 0) {
+        // Safe to drop 5 or 2 on partner's trick
+        if (hasFiveOfTrump) {
+          const fiveCard = followCards.find(c => c.rank === '5');
+          if (fiveCard) return fiveCard;
+        }
       }
+      
+      // Play lowest value point card (prefer losing 2 over J over 5)
+      const deuceCard = followCards.find(c => c.rank === '2');
+      const jackCard = followCards.find(c => c.rank === 'J');
+      const fiveCard = followCards.find(c => c.rank === '5');
+      if (deuceCard) return deuceCard;
+      if (jackCard) return jackCard;
+      if (fiveCard) return fiveCard;
+      
+      // Fallback
+      return followCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
     }
     
+    // Following non-trump suit - play highest to try to win, or lowest to conserve
+    if (teammateIsWinning) {
+      // Partner winning - play lowest
+      return followCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
+    }
+    // Try to win with highest
     return followCards.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
   }
 
