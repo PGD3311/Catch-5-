@@ -599,10 +599,14 @@ function getPlayerList(room: GameRoom): { seatIndex: number; playerName: string;
 function filterGameStateForPlayer(state: GameState, seatIndex: number): GameState {
   return {
     ...state,
-    players: state.players.map((p, index) => ({
-      ...p,
-      hand: index === seatIndex ? p.hand : p.hand.map(() => ({ rank: '2', suit: 'Spades', id: 'hidden' } as Card)),
-    })),
+    players: state.players.map((p, index) => {
+      const trumpCount = state.trumpSuit ? p.hand.filter(c => c.suit === state.trumpSuit).length : 0;
+      return {
+        ...p,
+        hand: index === seatIndex ? p.hand : p.hand.map(() => ({ rank: '2', suit: 'Spades', id: 'hidden' } as Card)),
+        trumpCount,
+      };
+    }),
   };
 }
 

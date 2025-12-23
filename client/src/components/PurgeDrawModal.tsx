@@ -66,6 +66,9 @@ export function PurgeDrawModal({ open, players, trumpSuit, onComplete }: PurgeDr
   };
 
   const getTrumpCount = (player: Player) => {
+    if (player.trumpCount !== undefined) {
+      return player.trumpCount;
+    }
     return player.hand.filter(c => c.suit === trumpSuit).length;
   };
 

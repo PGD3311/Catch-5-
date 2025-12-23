@@ -15,6 +15,7 @@ export interface Player {
   teamId: 'team1' | 'team2';
   bid: number | null;
   tricksWon: Card[];
+  trumpCount?: number;
 }
 
 export interface Team {
