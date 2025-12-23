@@ -192,7 +192,10 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
 async function handleJoinRoom(ws: WebSocket, message: any) {
   const { roomCode, playerName, playerToken: existingToken } = message;
   
-  const room = rooms.get(roomCode.toUpperCase());
+  const normalizedCode = roomCode?.toUpperCase?.() || '';
+  log(`Join room attempt: code=${normalizedCode}, available rooms: ${Array.from(rooms.keys()).join(', ')}`, 'ws');
+  
+  const room = rooms.get(normalizedCode);
   if (!room) {
     ws.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
     return;
