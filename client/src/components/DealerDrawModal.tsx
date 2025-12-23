@@ -1,10 +1,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Player, DealerDrawCard, RANK_ORDER } from '@shared/gameTypes';
+import { Player, DealerDrawCard, RANK_ORDER_ACE_LOW, Card } from '@shared/gameTypes';
 import { PlayingCard } from './PlayingCard';
 import { cn } from '@/lib/utils';
 import { Crown } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+const getDealerDrawValue = (card: Card): number => {
+  if (card.rank === 'A' && card.suit === 'Spades') return -1;
+  return RANK_ORDER_ACE_LOW[card.rank];
+};
 
 interface DealerDrawModalProps {
   open: boolean;
@@ -40,11 +45,11 @@ export function DealerDrawModal({ open, players, dealerDrawCards, onComplete, de
 
   let lowestIndex = 0;
   if (dealerDrawCards.length > 0) {
-    let lowestRank = RANK_ORDER[dealerDrawCards[0].card.rank];
+    let lowestValue = getDealerDrawValue(dealerDrawCards[0].card);
     for (let i = 1; i < dealerDrawCards.length; i++) {
-      const cardRank = RANK_ORDER[dealerDrawCards[i].card.rank];
-      if (cardRank < lowestRank) {
-        lowestRank = cardRank;
+      const cardValue = getDealerDrawValue(dealerDrawCards[i].card);
+      if (cardValue < lowestValue) {
+        lowestValue = cardValue;
         lowestIndex = i;
       }
     }
