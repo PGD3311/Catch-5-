@@ -93,9 +93,9 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
     return Math.abs(val - cardCenterX);
   });
 
-  const baseWidth = 64;
-  const maxWidth = 88;
-  const magnificationRange = 120;
+  const baseWidth = 52;
+  const maxWidth = 72;
+  const magnificationRange = 100;
   
   const widthSync = useTransform(distance, [0, magnificationRange], [maxWidth, baseWidth]);
   const width = useSpring(widthSync, { stiffness: 400, damping: 30, mass: 0.5 });
