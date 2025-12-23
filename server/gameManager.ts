@@ -312,10 +312,20 @@ async function processCpuTurns(room: GameRoom) {
       const cpuBid = gameEngine.getCpuBid(currentPlayer.hand, state.highBid, isDealer, allOthersPassed);
       state = gameEngine.processBid(state, cpuBid);
     } else if (state.phase === 'trump-selection') {
-      const trumpSuit = gameEngine.getCpuTrumpChoice(currentPlayer.hand);
+      // Check if dealer was forced to bid (all others passed, bid is minimum)
+      const wasForcedBid = state.highBid === 5 && 
+        state.players.filter(p => p.bid === 0).length === 3;
+      const trumpSuit = gameEngine.getCpuTrumpChoice(currentPlayer.hand, wasForcedBid);
       state = gameEngine.selectTrump(state, trumpSuit);
     } else if (state.phase === 'playing') {
-      const card = gameEngine.getCpuCardToPlay(currentPlayer.hand, state.currentTrick, state.trumpSuit!);
+      const card = gameEngine.getCpuCardToPlay(
+        currentPlayer.hand, 
+        state.currentTrick, 
+        state.trumpSuit!,
+        currentPlayer.id,
+        state.players,
+        state.bidderId
+      );
       state = gameEngine.playCard(state, card);
     } else {
       break;

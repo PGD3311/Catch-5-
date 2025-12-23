@@ -1,0 +1,49 @@
+Since your version includes the Mandatory Purge (discarding all non-trumps) and Low-to-Taker, the strategy is significantly different from standard Pitch. You cannot rely on holding "off-suit Aces" for points. The game is purely about Trump control and "digging" for the 5.
+Here is the strategic progression for Draw Catch 5 from beginner to expert.
+Phase 1: Basic Strategy (The Essentials)
+1. The "Bid or Bust" Rule
+ * The 5 is Everything: A bid of 5 or 6 is extremely dangerous if you don't hold the 5 of Trumps or the Ace/King to catch it.
+ * Safe Bidding Math:
+   * Ace + King: Bid 5 (You have 2 sure points, plus you will likely catch the Jack or Game, and maybe the 5).
+   * Holding the 5: Bid 5 or 6 (You have 5 points in your hand, but you need to make sure you don't get it captured).
+   * No Trumps? PASS. Do not bid on a "maybe."
+2. Lead Trumps Immediately
+ * If you win the bid, your first play should almost always be your highest Trump (Ace or King).
+ * Why? You are "hunting." You want to force the opponents to play their trumps. If an opponent is holding the 5 but only has one other small trump, leading the Ace might force them to drop the 5 right into your lap.
+3. Protect the "Money Card" (The 5)
+ * If you are dealt the 5, do not lead it.
+ * Wait until you see the Ace and King played, or wait until your partner plays a high card that is winning the trick, then drop your 5 on it to save it.
+Phase 2: Intermediate (Playing the "Draw")
+4. The "Digging" Strategy (The Reset)
+ * In your version, if you have zero trumps, you must discard all 9 cards.
+ * Strategy: If you have a mediocre hand (like just the 9 of Diamonds), it is often better to pass and hope to get a chance to "dig."
+ * If you are the Dealer and forced to take it for 5 with a terrible hand: Call a suit you have NONE of.
+   * Why? You dump your whole hand and draw 6 fresh cards. You are praying to draw the Ace or 5 of that new suit. It’s a "Hail Mary," but better than playing a losing hand.
+5. Saving the Low (Low-to-Taker)
+ * Since the Low point goes to the winner of the trick, the 2 of Trumps is a liability.
+ * If you lead the 2, an opponent will smack it with a 10 or Jack and steal your point.
+ * The Move: Try to play your 2 on a trick your partner is already winning. If you can't, play it on a trick an opponent has already won (sacrifice it) rather than leading it and letting them win it cheaply.
+6. Watching the "Reneges"
+ * Since players draw blindly, someone might only have 1 trump. If the Bidder leads the Ace, and an opponent plays a non-trump (off-suit), you know that opponent is likely out of trumps.
+ * Mental Note: You can now safely lead your lower trumps through that player without fear of being over-trumped.
+Phase 3: Advanced (Psychology & Probability)
+7. The "Partner Check" Lead
+ * If you bid 5 but your hand is only medium-strength (e.g., King, Jack, 10), do not lead your King.
+ * Lead a small trump (like the 6 or 7).
+ * Why? You are signaling your partner. You are asking: "Partner, can you top this?" If your partner has the Ace, they will take the trick, and now you have the lead in your team's hands while saving your King for later.
+8. Calculating the "Game" Point
+ * In "Mandatory Purge," nobody keeps Aces/Tens of other suits. This means the "Game" point is usually decided by the random "trash" cards people pick up in the draw.
+ * Advanced Play: Count the 10s and face cards as they drop. If the score is tied or close, throwing a random Ten of Clubs on a trick (instead of a 2 of Clubs) can be the difference between making the bid or going set.
+9. The "Trap" Play (With the 5)
+ * Scenario: You are an opponent (not the bidder). You hold the Ace and the 5.
+ * The Bidder leads the King.
+ * The Trap: Do NOT play your Ace. Play the 5 (give them 5 points)?? NO!
+ * Play a small trump. Let them win with the King.
+ * The Kill: Now the Bidder thinks the Ace is elsewhere or buried. They might lead a lower trump next. BAM! You smack it with the Ace. You saved your 5, and now you have the lead to hunt their other points.
+10. Defensive Discarding
+ * If you are an opponent and you have a bad hand, but you have one specific high card (like the Jack of Trumps), you are dangerous.
+ * If the Bidder is forced to "Dig" (draw 6 new cards), they are vulnerable. Play aggressively. Make them bleed their trumps early so they can't catch the random 5s that might be in the deck.
+Summary of Winning Priorities:
+ * Secure the 5: It is worth more than High, Low, Jack, and Game combined.
+ * Bleed Trumps: If you have the high cards, drain the opponents of trumps immediately.
+ * Dig if Desperate: Don't be afraid to call a suit you don't have if you are forced to bid—the fresh 6 cards might save you.

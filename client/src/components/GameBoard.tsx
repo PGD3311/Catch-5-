@@ -27,6 +27,7 @@ import {
   playCard,
   canPlayCard,
   getCpuBid,
+  getCpuTrumpChoice,
   getCpuCardToPlay,
   startNewRound,
   checkGameOver,
@@ -230,20 +231,16 @@ export function GameBoard() {
       const bidder = gameState.players.find(p => p.id === gameState.bidderId);
       if (bidder && !bidder.isHuman) {
         const timer = setTimeout(() => {
-          const suitScores: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
-          for (const card of bidder.hand) {
-            suitScores[card.suit] += 1;
-            if (card.rank === '5') suitScores[card.suit] += 6;
-            if (card.rank === 'J') suitScores[card.suit] += 2;
-            if (card.rank === 'A') suitScores[card.suit] += 4;
-          }
-          const bestSuit = Object.entries(suitScores).reduce((a, b) => (b[1] > a[1] ? b : a))[0] as Suit;
+          // Check if dealer was forced to bid (all others passed, bid is minimum)
+          const wasForcedBid = gameState.highBid === 5 && 
+            gameState.players.filter(p => p.bid === 0).length === 3;
+          const bestSuit = getCpuTrumpChoice(bidder.hand, wasForcedBid);
           handleTrumpSelect(bestSuit);
         }, 900 + Math.random() * 400);
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState.phase, gameState.players, gameState.bidderId, isMultiplayerMode, handleTrumpSelect]);
+  }, [gameState.phase, gameState.players, gameState.bidderId, gameState.highBid, isMultiplayerMode, handleTrumpSelect]);
 
   useEffect(() => {
     if (isMultiplayerMode) return;
@@ -257,7 +254,8 @@ export function GameBoard() {
             gameState.currentTrick,
             gameState.trumpSuit,
             currentPlayer.id,
-            gameState.players
+            gameState.players,
+            gameState.bidderId
           );
           
           const newTrick = [...gameState.currentTrick, { playerId: currentPlayer.id, card: cardToPlay }];

@@ -164,10 +164,13 @@ export function getCpuBid(hand: Card[], highBid: number, isDealer: boolean, allP
   return 0;
 }
 
-export function getCpuTrumpChoice(hand: Card[]): Suit {
+export function getCpuTrumpChoice(hand: Card[], forcedBid: boolean = false): Suit {
+  const suits: Suit[] = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
   const suitScores: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
+  const suitCounts: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
 
   for (const card of hand) {
+    suitCounts[card.suit] += 1;
     suitScores[card.suit] += 1;
     if (card.rank === '5') suitScores[card.suit] += 6;
     if (card.rank === 'J') suitScores[card.suit] += 2;
@@ -176,18 +179,52 @@ export function getCpuTrumpChoice(hand: Card[]): Suit {
     if (card.rank === 'Q') suitScores[card.suit] += 1;
   }
 
+  // "Desperate Dig" Strategy: If forced to bid with a terrible hand,
+  // call a suit you have NONE of - discard everything and draw fresh
+  if (forcedBid) {
+    const bestScore = Math.max(...Object.values(suitScores));
+    if (bestScore <= 2) {
+      const emptySuits = suits.filter(s => suitCounts[s] === 0);
+      if (emptySuits.length > 0) {
+        return emptySuits[Math.floor(Math.random() * emptySuits.length)];
+      }
+    }
+  }
+
   return Object.entries(suitScores).reduce((a, b) => (b[1] > a[1] ? b : a))[0] as Suit;
 }
 
 export function getCpuCardToPlay(
   hand: Card[],
   currentTrick: { playerId: string; card: Card }[],
-  trumpSuit: Suit | null
+  trumpSuit: Suit | null,
+  cpuPlayerId?: string,
+  allPlayers?: { id: string }[],
+  bidderId?: string | null
 ): Card {
+  const trumpCards = hand.filter(c => c.suit === trumpSuit);
+  const isBidWinner = cpuPlayerId && bidderId && cpuPlayerId === bidderId;
+  
   if (currentTrick.length === 0) {
-    const trumpCards = hand.filter(c => c.suit === trumpSuit);
     if (trumpCards.length > 0) {
-      return trumpCards.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+      // Never lead the 5 or 2
+      const safeLeadTrumps = trumpCards.filter(c => c.rank !== '5' && c.rank !== '2');
+      
+      // Bid winner leads high trumps to hunt
+      if (isBidWinner) {
+        const ace = trumpCards.find(c => c.rank === 'A');
+        if (ace) return ace;
+        const king = trumpCards.find(c => c.rank === 'K');
+        if (king && trumpCards.length >= 2) return king;
+      }
+      
+      if (safeLeadTrumps.length > 0) {
+        return isBidWinner
+          ? safeLeadTrumps.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a))
+          : safeLeadTrumps.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
+      }
+      
+      return trumpCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
     }
     return hand.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
   }
@@ -199,7 +236,6 @@ export function getCpuCardToPlay(
     return followCards.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
   }
 
-  const trumpCards = hand.filter(c => c.suit === trumpSuit);
   if (trumpCards.length > 0) {
     return trumpCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
   }

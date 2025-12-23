@@ -193,40 +193,55 @@ function evaluateSuitStrength(hand: Card[], suit: Suit): {
   
   let estimatedBid = 0;
   
+  // Strategic bidding based on expert play:
+  // - Ace + King = safe bid of 5 (2 sure points, likely catch J/Game/maybe 5)
+  // - Holding 5 = only safe if protected by Ace or 4+ trumps
+  // - No trumps = always pass
+  
+  const hasHighControl = hasAce || (hasKing && trumpCount >= 3);
   const fiveIsProtected = hasFive && (hasAce || trumpCount >= 4);
-  const fiveIsRisky = hasFive && !hasAce && trumpCount <= 2;
+  const fiveIsVulnerable = hasFive && !hasAce && trumpCount <= 2;
   
   if (trumpCount === 0) {
     estimatedBid = 0;
   } else if (trumpCount === 1) {
+    // Single trump: only bid with Ace (controls the suit)
     if (hasAce) estimatedBid = 5;
-    else if (hasFive) estimatedBid = 0;
-    else estimatedBid = 0;
+    else estimatedBid = 0; // Even the 5 alone is too risky
   } else if (trumpCount === 2) {
-    if (hasAce && hasFive) estimatedBid = 7;
-    else if (hasAce) estimatedBid = 6;
-    else if (hasFive) estimatedBid = 5;
-    else estimatedBid = 5;
+    if (hasAce && hasKing) estimatedBid = 6; // Strong control
+    else if (hasAce && hasFive) estimatedBid = 6; // Protected 5
+    else if (hasAce) estimatedBid = 5;
+    else if (hasKing && hasFive) estimatedBid = 5; // Risky but playable
+    else estimatedBid = 0; // No control, don't bid
   } else if (trumpCount === 3) {
-    if (hasAce && hasFive) estimatedBid = 8;
-    else if (hasAce) estimatedBid = 7;
-    else if (hasFive) estimatedBid = 6;
+    if (hasAce && hasFive) estimatedBid = 7;
+    else if (hasAce && hasKing) estimatedBid = 7;
+    else if (hasAce) estimatedBid = 6;
+    else if (hasKing && hasFive) estimatedBid = 6;
+    else if (hasFive) estimatedBid = 5; // 3 trumps gives some protection
     else estimatedBid = 5;
   } else if (trumpCount >= 4) {
-    if (hasAce && hasFive) estimatedBid = 9;
-    else if (hasAce) estimatedBid = 8;
-    else if (hasFive) estimatedBid = 7;
+    // 4+ trumps = strong trump control
+    if (hasAce && hasFive) estimatedBid = 8;
+    else if (hasAce && hasKing) estimatedBid = 8;
+    else if (hasAce) estimatedBid = 7;
+    else if (hasFive) estimatedBid = 7; // 4+ trumps protects the 5
     else estimatedBid = 6;
   }
   
-  if (hasKing && hasAce) estimatedBid = Math.min(9, estimatedBid + 1);
-  if (hasJack || hasDeuce) estimatedBid = Math.min(9, estimatedBid + 1);
+  // Bonus for Jack or Deuce (extra point cards)
+  if ((hasJack || hasDeuce) && estimatedBid > 0) {
+    estimatedBid = Math.min(9, estimatedBid + 1);
+  }
   
+  // Cap at 7 without Ace (no trump control for high bids)
   if (!hasAce && estimatedBid >= 8) {
     estimatedBid = 7;
   }
   
-  if (fiveIsRisky && estimatedBid > 5) {
+  // The 5 is a liability without protection - cap conservative
+  if (fiveIsVulnerable && estimatedBid > 5) {
     estimatedBid = 5;
   }
   
@@ -274,16 +289,34 @@ export function getCpuBid(hand: Card[], highBid: number, isDealer: boolean, allP
   return 0;
 }
 
-export function getCpuTrumpChoice(hand: Card[]): Suit {
+export function getCpuTrumpChoice(hand: Card[], forcedBid: boolean = false): Suit {
+  const suits: Suit[] = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
   const suitScores: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
+  const suitCounts: Record<Suit, number> = { Hearts: 0, Diamonds: 0, Clubs: 0, Spades: 0 };
 
   for (const card of hand) {
+    suitCounts[card.suit] += 1;
     suitScores[card.suit] += 1;
     if (card.rank === '5') suitScores[card.suit] += 6;
     if (card.rank === 'J') suitScores[card.suit] += 2;
     if (card.rank === 'A') suitScores[card.suit] += 4;
     if (card.rank === 'K') suitScores[card.suit] += 2;
     if (card.rank === 'Q') suitScores[card.suit] += 1;
+  }
+
+  // "Desperate Dig" Strategy: If forced to bid with a terrible hand,
+  // call a suit you have NONE of - you'll discard everything and draw 6 fresh cards
+  // hoping to get the Ace or 5 of that suit
+  if (forcedBid) {
+    const bestScore = Math.max(...Object.values(suitScores));
+    // If our best suit is terrible (low score), try digging
+    if (bestScore <= 2) {
+      const emptySuits = suits.filter(s => suitCounts[s] === 0);
+      if (emptySuits.length > 0) {
+        // Pick a random empty suit to "Hail Mary" dig
+        return emptySuits[Math.floor(Math.random() * emptySuits.length)];
+      }
+    }
   }
 
   return Object.entries(suitScores).reduce((a, b) => (b[1] > a[1] ? b : a))[0] as Suit;
@@ -294,7 +327,8 @@ export function getCpuCardToPlay(
   currentTrick: { playerId: string; card: Card }[],
   trumpSuit: Suit | null,
   cpuPlayerId?: string,
-  allPlayers?: { id: string }[]
+  allPlayers?: { id: string }[],
+  bidderId?: string | null
 ): Card {
   const trumpCards = hand.filter(c => c.suit === trumpSuit);
   const POINT_RANKS = ['5', 'J', '2', 'A'];
@@ -361,24 +395,53 @@ export function getCpuCardToPlay(
   const getMyPointCards = () => trumpCards.filter(c => POINT_RANKS.includes(c.rank));
   const getNonPointTrumps = () => trumpCards.filter(c => !POINT_RANKS.includes(c.rank));
 
+  // LEADING STRATEGY (when starting a trick)
+  const isBidWinner = cpuPlayerId && bidderId && cpuPlayerId === bidderId;
+  
   if (currentTrick.length === 0) {
     if (trumpCards.length > 0) {
-      if (hasAceOfTrump && !hasFiveOfTrump && trumpCards.length >= 2) {
-        const aceCard = trumpCards.find(c => c.rank === 'A');
-        if (aceCard) return aceCard;
-      }
-      if (hasFiveOfTrump && trumpCards.length >= 3) {
-        const highTrumps = trumpCards.filter(c => c.rank !== '5' && RANK_ORDER[c.rank] >= RANK_ORDER['J']);
-        if (highTrumps.length > 0) {
-          return highTrumps.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+      // Key rules for ALL players:
+      // - NEVER lead the 5 (vulnerable to capture)
+      // - NEVER lead the 2 (opponent wins trick and steals Low point)
+      const safeLeadTrumps = trumpCards.filter(c => 
+        c.rank !== '5' && c.rank !== '2' && c.rank !== 'J'
+      );
+      
+      // BID WINNER STRATEGY: Lead high trumps (Ace/King) to "hunt" for opponent's 5
+      if (isBidWinner) {
+        if (hasAceOfTrump) {
+          const aceCard = trumpCards.find(c => c.rank === 'A');
+          if (aceCard) return aceCard;
+        }
+        const hasKingOfTrump = trumpCards.some(c => c.rank === 'K');
+        if (hasKingOfTrump && trumpCards.length >= 2) {
+          const kingCard = trumpCards.find(c => c.rank === 'K');
+          if (kingCard) return kingCard;
         }
       }
-      const nonPointTrumps = getNonPointTrumps();
-      if (nonPointTrumps.length > 0) {
-        return nonPointTrumps.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+      
+      // DEFENDER STRATEGY: Lead small/medium trumps to probe, save high cards
+      // Lead safe non-point trumps (not 5, 2, or J)
+      if (safeLeadTrumps.length > 0) {
+        if (isBidWinner) {
+          // Bidder leads highest to bleed opponents
+          return safeLeadTrumps.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+        } else {
+          // Defender leads lower trumps to probe ("Partner Check" lead)
+          return safeLeadTrumps.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
+        }
       }
-      return trumpCards.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+      
+      // Only lead point cards as last resort (but never 5 or 2)
+      const desperateTrumps = trumpCards.filter(c => c.rank !== '5' && c.rank !== '2');
+      if (desperateTrumps.length > 0) {
+        return desperateTrumps.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
+      }
+      
+      // Absolute last resort - play lowest trump (probably stuck with just 5 or 2)
+      return trumpCards.reduce((a, b) => (RANK_ORDER[a.rank] < RANK_ORDER[b.rank] ? a : b));
     }
+    // No trumps - lead highest non-trump
     return hand.reduce((a, b) => (RANK_ORDER[b.rank] > RANK_ORDER[a.rank] ? b : a));
   }
 
@@ -392,6 +455,25 @@ export function getCpuCardToPlay(
   
   const pointCardInTrick = getPointCardInTrick();
   const teammateHasPointCard = pointCardInTrick && pointCardInTrick.playerId === teammateId;
+  
+  // SAVE POINT CARDS STRATEGY: Play 5 or 2 on partner's winning trick
+  // The 5 should be dropped on a trick partner is winning to save it
+  // The 2 (Low) should be played on partner's winning trick to secure the Low point
+  if (teammateIsWinning && opponentsAfterMe.length === 0) {
+    // Safe to drop point cards on partner's winning trick
+    if (hasFiveOfTrump) {
+      const fiveCard = trumpCards.find(c => c.rank === '5');
+      if (fiveCard && canPlayCard(fiveCard, hand, currentTrick, trumpSuit)) {
+        return fiveCard;
+      }
+    }
+    if (hasDeuceOfTrump) {
+      const deuceCard = trumpCards.find(c => c.rank === '2');
+      if (deuceCard && canPlayCard(deuceCard, hand, currentTrick, trumpSuit)) {
+        return deuceCard;
+      }
+    }
+  }
 
   if (pointCardInTrick && !teammateHasPointCard) {
     const targetRank = RANK_ORDER[pointCardInTrick.card.rank];
