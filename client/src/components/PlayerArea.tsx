@@ -1,5 +1,6 @@
 import { Player, DeckColor, Card as CardType, Team, Suit } from '@shared/gameTypes';
 import { PlayingCard, CardBack } from './PlayingCard';
+import { CardDock } from './CardDock';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -185,52 +186,15 @@ export function PlayerArea({
     </motion.div>
   );
 
-  // Bottom player's card fan with gradient backdrop
+  // Bottom player's cards with macOS Dock-style magnification
   const renderBottomCards = () => (
-    <div className={cn(
-      'relative w-full',
-      'pb-2 pt-1'
-    )}>
-      {/* Gradient backdrop for breathing room */}
-      <div className="absolute inset-x-0 bottom-0 h-32 sm:h-40 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
-      
-      <div className={cn(getHandClasses(), 'relative z-10 min-h-20 sm:min-h-28')}>
-        <AnimatePresence mode="popLayout">
-          {player.hand.map((card, index) => {
-            const canPlay = canPlayCard ? canPlayCard(card) : true;
-            const cardCount = player.hand.length;
-            const spreadAngle = cardCount > 6 ? 1.5 : 2;
-            const rotation = (index - (cardCount - 1) / 2) * spreadAngle;
-            const mobileOverlap = cardCount > 6 ? -30 : -26;
-            const desktopOverlap = cardCount > 6 ? -16 : -12;
-
-            return (
-              <motion.div
-                key={card.id}
-                layout
-                initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.5, y: -30 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                style={{
-                  marginLeft: index > 0 ? `clamp(${mobileOverlap}px, -4vw, ${desktopOverlap}px)` : undefined,
-                  rotate: rotation,
-                  zIndex: index,
-                }}
-              >
-                <PlayingCard
-                  card={card}
-                  onClick={() => onCardClick?.(card)}
-                  disabled={!canPlay || !isCurrentPlayer}
-                  small={false}
-                  trumpSuit={trumpSuit}
-                />
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-    </div>
+    <CardDock
+      cards={player.hand}
+      onCardClick={onCardClick}
+      canPlayCard={canPlayCard}
+      isCurrentPlayer={isCurrentPlayer}
+      trumpSuit={trumpSuit}
+    />
   );
 
   // Desktop card backs for non-bottom players
