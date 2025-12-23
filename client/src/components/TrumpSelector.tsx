@@ -19,7 +19,7 @@ const suitConfig = {
 export function TrumpSelector({ open, onSelect }: TrumpSelectorProps) {
   return (
     <Dialog open={open}>
-      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg top-[30%] translate-y-[-50%]" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-center text-2xl">Select Trump Suit</DialogTitle>
         </DialogHeader>
