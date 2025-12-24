@@ -226,6 +226,8 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     const storedRoom = await storage.getRoomByCode(normalizedCode);
     if (storedRoom) {
       log(`Restoring room ${normalizedCode} from database`, 'ws');
+      
+      // Create the room with empty players initially
       room = {
         id: storedRoom.id,
         code: storedRoom.code,
@@ -236,6 +238,29 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
         targetScore: storedRoom.targetScore || 25,
         chatMessages: [],
       };
+      
+      // Restore player seat assignments from database (without WebSocket connections)
+      // This allows players to rejoin with their original tokens and seat indices
+      const storedPlayers = await storage.getPlayersInRoom(storedRoom.id);
+      for (const storedPlayer of storedPlayers) {
+        if (storedPlayer.isHuman) {
+          // Create placeholder for human players - they'll reconnect with their token
+          room.players.set(storedPlayer.playerToken, {
+            ws: null as any, // Will be set when player reconnects
+            roomId: storedRoom.id,
+            playerToken: storedPlayer.playerToken,
+            seatIndex: storedPlayer.seatIndex,
+            playerName: storedPlayer.playerName,
+          });
+        } else {
+          // Restore CPU players
+          room.cpuPlayers.push({
+            seatIndex: storedPlayer.seatIndex,
+            playerName: storedPlayer.playerName,
+          });
+        }
+      }
+      
       rooms.set(normalizedCode, room);
     }
   }
@@ -630,11 +655,13 @@ async function handleSwapSeats(ws: WebSocket, message: any) {
 
   const playerList = getPlayerList(room);
   Array.from(room.players.values()).forEach(p => {
-    p.ws.send(JSON.stringify({
-      type: 'seats_updated',
-      seatIndex: p.seatIndex,
-      players: playerList,
-    }));
+    if (p.ws && p.ws.readyState === WebSocket.OPEN) {
+      p.ws.send(JSON.stringify({
+        type: 'seats_updated',
+        seatIndex: p.seatIndex,
+        players: playerList,
+      }));
+    }
   });
 
   log(`Seats ${seat1} and ${seat2} swapped in room ${room.code}`, 'ws');
@@ -685,11 +712,13 @@ async function handleRandomizeTeams(ws: WebSocket) {
 
   const playerList = getPlayerList(room);
   Array.from(room.players.values()).forEach(p => {
-    p.ws.send(JSON.stringify({
-      type: 'seats_updated',
-      seatIndex: p.seatIndex,
-      players: playerList,
-    }));
+    if (p.ws && p.ws.readyState === WebSocket.OPEN) {
+      p.ws.send(JSON.stringify({
+        type: 'seats_updated',
+        seatIndex: p.seatIndex,
+        players: playerList,
+      }));
+    }
   });
 
   log(`Teams randomized in room ${room.code}`, 'ws');
@@ -699,7 +728,16 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room) return;
 
-  room.players.delete(player.playerToken);
+  // During an active game, don't delete the player - just mark them as disconnected
+  // This preserves their seat assignment so they can reconnect with the same token
+  if (room.gameState) {
+    player.ws = null as any; // Mark as disconnected but keep seat
+    log(`Player ${player.playerName} disconnected from active game in room ${room.code}`, 'ws');
+  } else {
+    // No active game, safe to delete the player
+    room.players.delete(player.playerToken);
+    log(`Player ${player.playerName} left room ${room.code}`, 'ws');
+  }
   
   broadcastToRoom(room, {
     type: 'player_disconnected',
@@ -707,7 +745,9 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
     players: getPlayerList(room),
   });
 
-  if (room.players.size === 0) {
+  // Only delete room if ALL players are fully disconnected (no players left at all)
+  const connectedPlayers = Array.from(room.players.values()).filter(p => p.ws !== null);
+  if (connectedPlayers.length === 0 && !room.gameState) {
     rooms.delete(room.code);
     storage.deleteRoom(room.id);
     log(`Room ${room.code} deleted (empty)`, 'ws');
@@ -718,7 +758,7 @@ function getPlayerList(room: GameRoom): { seatIndex: number; playerName: string;
   const humanPlayers = Array.from(room.players.values()).map(p => ({
     seatIndex: p.seatIndex,
     playerName: p.playerName,
-    connected: true,
+    connected: p.ws !== null && p.ws.readyState === WebSocket.OPEN,
     isCpu: false,
   }));
   
@@ -752,7 +792,7 @@ function broadcastGameState(room: GameRoom) {
   const players = Array.from(room.players.values());
   for (const player of players) {
     const filteredState = filterGameStateForPlayer(room.gameState, player.seatIndex);
-    if (player.ws.readyState === WebSocket.OPEN) {
+    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
       player.ws.send(JSON.stringify({
         type: 'game_state',
         gameState: filteredState,
@@ -764,7 +804,7 @@ function broadcastGameState(room: GameRoom) {
 function broadcastToRoom(room: GameRoom, message: any, excludeWs?: WebSocket) {
   const players = Array.from(room.players.values());
   for (const player of players) {
-    if (player.ws !== excludeWs && player.ws.readyState === WebSocket.OPEN) {
+    if (player.ws && player.ws !== excludeWs && player.ws.readyState === WebSocket.OPEN) {
       player.ws.send(JSON.stringify(message));
     }
   }
@@ -815,7 +855,7 @@ async function handleSendChat(ws: WebSocket, message: any) {
   // Broadcast to all players including sender
   const players = Array.from(room.players.values());
   for (const p of players) {
-    if (p.ws.readyState === WebSocket.OPEN) {
+    if (p.ws && p.ws.readyState === WebSocket.OPEN) {
       p.ws.send(JSON.stringify({
         type: 'chat_message',
         message: chatMessage,
