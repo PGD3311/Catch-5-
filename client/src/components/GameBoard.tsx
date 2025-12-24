@@ -387,23 +387,32 @@ export function GameBoard() {
 
   useEffect(() => {
     if (isMultiplayerMode) return;
-    if (gameState.phase === 'playing') {
-      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-      if (!currentPlayer.isHuman && currentPlayer.hand.length > 0) {
-        const baseDelay = displayTrick.length > 0 ? 2800 : 700 + Math.random() * 500;
-        const timer = setTimeout(() => {
+    if (gameState.phase !== 'playing') return;
+    // Don't process CPU turns while displaying a completed trick
+    if (displayTrick.length > 0) return;
+    
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    if (!currentPlayer.isHuman && currentPlayer.hand.length > 0) {
+      const baseDelay = 700 + Math.random() * 500;
+      const timer = setTimeout(() => {
+        // Double-check we're still in playing phase and it's still this CPU's turn
+        setGameState(prev => {
+          if (prev.phase !== 'playing') return prev;
+          if (prev.players[prev.currentPlayerIndex].isHuman) return prev;
+          if (prev.players[prev.currentPlayerIndex].id !== currentPlayer.id) return prev;
+          
           const cardToPlay = getCpuCardToPlay(
-            currentPlayer.hand,
-            gameState.currentTrick,
-            gameState.trumpSuit,
+            prev.players[prev.currentPlayerIndex].hand,
+            prev.currentTrick,
+            prev.trumpSuit,
             currentPlayer.id,
-            gameState.players,
-            gameState.bidderId
+            prev.players,
+            prev.bidderId
           );
           
-          const newTrick = [...gameState.currentTrick, { playerId: currentPlayer.id, card: cardToPlay }];
+          const newTrick = [...prev.currentTrick, { playerId: currentPlayer.id, card: cardToPlay }];
           
-          if (newTrick.length === 4 && gameState.trumpSuit) {
+          if (newTrick.length === 4 && prev.trumpSuit) {
             setDisplayTrick(newTrick);
             
             if (trickWinnerTimeoutRef.current) {
@@ -411,14 +420,15 @@ export function GameBoard() {
             }
             trickWinnerTimeoutRef.current = setTimeout(() => {
               setDisplayTrick([]);
-              setGameState(prev => playCard(prev, cardToPlay));
+              setGameState(prevInner => playCard(prevInner, cardToPlay));
             }, 2500);
+            return prev; // Don't update state yet - wait for displayTrick timeout
           } else {
-            setGameState(prev => playCard(prev, cardToPlay));
+            return playCard(prev, cardToPlay);
           }
-        }, baseDelay);
-        return () => clearTimeout(timer);
-      }
+        });
+      }, baseDelay);
+      return () => clearTimeout(timer);
     }
   }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit, isMultiplayerMode, displayTrick.length]);
 
