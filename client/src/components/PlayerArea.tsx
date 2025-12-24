@@ -42,6 +42,11 @@ export function PlayerArea({
   const isTop = position === 'top';
   const isSide = position === 'left' || position === 'right';
   const isYourTeam = team.id === 'team1';
+  
+  // Team colors: Team 1 = Blue, Team 2 = Red/Orange
+  const teamColorClasses = team.id === 'team1' 
+    ? { text: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/40', dot: 'bg-blue-500' }
+    : { text: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/40', dot: 'bg-orange-500' };
 
   const getContainerClasses = () => {
     const base = 'flex items-center gap-2';
@@ -64,15 +69,16 @@ export function PlayerArea({
       className={cn(
         'flex items-center gap-1.5 px-2.5 py-1 rounded-full',
         'border backdrop-blur-sm transition-all',
-        isCurrentPlayer 
-          ? 'border-primary/50 bg-primary/10' 
-          : 'border-border/30 bg-background/30'
+        teamColorClasses.border,
+        teamColorClasses.bg
       )}
       data-testid={`player-chip-${player.id}`}
     >
+      {/* Team color dot */}
+      <span className={cn('w-2 h-2 rounded-full', teamColorClasses.dot)} />
       <span className={cn(
         'text-[11px] font-medium',
-        isYourTeam ? 'text-emerald-400' : 'text-foreground/70'
+        teamColorClasses.text
       )}>{player.name}</span>
       {isDealer && (
         <span className="px-1.5 py-0.5 text-[9px] text-amber-400 font-bold rounded-full border border-amber-400/60 bg-amber-500/10">D</span>
@@ -134,26 +140,24 @@ export function PlayerArea({
       <div className="flex items-center gap-2">
         <div className={cn(
           'w-6 h-6 rounded-full flex items-center justify-center',
-          isYourTeam 
-            ? 'bg-emerald-500/20' 
-            : 'bg-slate-500/20'
+          teamColorClasses.bg
         )}>
           {player.isHuman ? (
-            <User className="w-3 h-3 text-foreground/60" />
+            <User className={cn('w-3 h-3', teamColorClasses.text)} />
           ) : (
-            <Bot className="w-3 h-3 text-foreground/60" />
+            <Bot className={cn('w-3 h-3', teamColorClasses.text)} />
           )}
         </div>
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-1">
-            <span className="font-medium text-sm">{player.name}</span>
+            <span className={cn('font-medium text-sm', teamColorClasses.text)}>{player.name}</span>
             {isBidder && (
               <Crown className="w-3 h-3 text-amber-400" />
             )}
           </div>
           <span className={cn(
             'text-[9px] font-medium uppercase tracking-wider',
-            isYourTeam ? 'text-emerald-400/80' : 'text-muted-foreground/60'
+            teamColorClasses.text, 'opacity-70'
           )}>
             {team.name}
           </span>
@@ -238,10 +242,15 @@ export function PlayerArea({
         <>
           {/* Compact identity line for bottom player */}
           <div className="flex items-center justify-center gap-3 w-full px-4">
-            <div className="flex items-center gap-1.5">
+            <div className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-full',
+              teamColorClasses.border, teamColorClasses.bg, 'border'
+            )}>
+              {/* Team color dot */}
+              <span className={cn('w-2 h-2 rounded-full', teamColorClasses.dot)} />
               <span className={cn(
                 'text-xs font-medium',
-                isYourTeam ? 'text-emerald-400' : 'text-foreground/70'
+                teamColorClasses.text
               )}>{player.name}</span>
               {isDealer && (
                 <span className="px-1.5 py-0.5 text-[9px] text-amber-400 font-bold rounded-full border border-amber-400/60 bg-amber-500/10">D</span>
