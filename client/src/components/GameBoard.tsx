@@ -13,6 +13,7 @@ import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
 import { MultiplayerLobby } from './MultiplayerLobby';
 import { LastTrickModal } from './LastTrickModal';
+import { ChatPanel } from './ChatPanel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -50,14 +51,39 @@ export function GameBoard() {
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [trickWinner, setTrickWinner] = useState<Player | null>(null);
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const trickWinnerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevTrickRef = useRef<TrickCard[]>([]);
+  const lastChatCountRef = useRef(0);
   const { toast } = useToast();
 
   const multiplayer = useMultiplayer();
   const isMultiplayerMode = !!multiplayer.roomCode;
   const gameState = isMultiplayerMode && multiplayer.gameState ? multiplayer.gameState : localGameState;
   const mySeatIndex = isMultiplayerMode ? (multiplayer.seatIndex ?? 0) : 0;
+  
+  // Track unread chat messages
+  useEffect(() => {
+    if (!isMultiplayerMode) return;
+    const newCount = multiplayer.chatMessages.length;
+    if (newCount > lastChatCountRef.current && !isChatOpen) {
+      setUnreadCount(prev => prev + (newCount - lastChatCountRef.current));
+    }
+    lastChatCountRef.current = newCount;
+  }, [multiplayer.chatMessages.length, isChatOpen, isMultiplayerMode]);
+  
+  // Reset unread count when opening chat
+  const handleChatToggle = useCallback(() => {
+    if (!isChatOpen) {
+      setUnreadCount(0);
+    }
+    setIsChatOpen(prev => !prev);
+  }, [isChatOpen]);
+  
+  const handleSendChat = useCallback((content: string, type: 'text' | 'emoji') => {
+    multiplayer.sendChat(content, type);
+  }, [multiplayer]);
   
   // Debug logging for trick card positioning
   useEffect(() => {
@@ -651,6 +677,16 @@ export function GameBoard() {
         winnerId={gameState.lastTrickWinnerId || null}
         trumpSuit={gameState.trumpSuit}
       />
+      {isMultiplayerMode && gameState.phase !== 'setup' && (
+        <ChatPanel
+          messages={multiplayer.chatMessages}
+          onSendMessage={handleSendChat}
+          currentPlayerId={`player${mySeatIndex + 1}`}
+          isOpen={isChatOpen}
+          onToggle={handleChatToggle}
+          unreadCount={unreadCount}
+        />
+      )}
     </div>
   );
 }

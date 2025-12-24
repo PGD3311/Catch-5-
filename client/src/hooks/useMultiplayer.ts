@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState, Card, Suit, DeckColor } from '@shared/gameTypes';
+import type { GameState, Card, Suit, DeckColor, ChatMessage } from '@shared/gameTypes';
 
 interface RoomPlayer {
   seatIndex: number;
@@ -16,6 +16,7 @@ interface MultiplayerState {
   players: RoomPlayer[];
   gameState: GameState | null;
   error: string | null;
+  chatMessages: ChatMessage[];
 }
 
 export function useMultiplayer() {
@@ -27,6 +28,7 @@ export function useMultiplayer() {
     players: [],
     gameState: null,
     error: null,
+    chatMessages: [],
   });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -154,6 +156,7 @@ export function useMultiplayer() {
           players: [],
           gameState: null,
           error: null,
+          chatMessages: [],
         });
         break;
 
@@ -162,6 +165,13 @@ export function useMultiplayer() {
         break;
       
       case 'pong':
+        break;
+      
+      case 'chat_message':
+        setState(prev => ({
+          ...prev,
+          chatMessages: [...prev.chatMessages.slice(-49), message.message],
+        }));
         break;
     }
   };
@@ -242,6 +252,16 @@ export function useMultiplayer() {
     }
   }, []);
 
+  const sendChat = useCallback((content: string, chatType: 'text' | 'emoji') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'send_chat',
+        content,
+        chatType,
+      }));
+    }
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -253,5 +273,6 @@ export function useMultiplayer() {
     removeCpu,
     swapSeats,
     randomizeTeams,
+    sendChat,
   };
 }
