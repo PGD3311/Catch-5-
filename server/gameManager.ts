@@ -392,12 +392,15 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     isConnected: true,
   });
 
+  const playerList = getPlayerList(room);
+  log(`Player ${trimmedName} joining seat ${availableSeat}, player list: ${JSON.stringify(playerList)}`, 'ws');
+
   ws.send(JSON.stringify({
     type: 'joined',
     roomCode: room.code,
     playerToken,
     seatIndex: availableSeat,
-    players: getPlayerList(room),
+    players: playerList,
   }));
 
   broadcastToRoom(room, {

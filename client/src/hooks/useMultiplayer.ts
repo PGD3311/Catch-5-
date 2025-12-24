@@ -90,6 +90,12 @@ export function useMultiplayer() {
     switch (message.type) {
       case 'room_created':
       case 'joined':
+        console.log('[useMultiplayer] Room created/joined:', { 
+          type: message.type,
+          roomCode: message.roomCode, 
+          seatIndex: message.seatIndex, 
+          playersReceived: message.players 
+        });
         sessionStorage.setItem('playerToken', message.playerToken);
         sessionStorage.setItem('roomCode', message.roomCode);
         // Also save the player name from the players list
