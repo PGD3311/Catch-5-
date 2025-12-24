@@ -13,7 +13,8 @@ import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
 import { MultiplayerLobby } from './MultiplayerLobby';
 import { LastTrickModal } from './LastTrickModal';
-import { ChatPanel } from './ChatPanel';
+import { ChatPanel, FloatingEmoji } from './ChatPanel';
+import type { ChatMessage } from '@shared/gameTypes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -53,9 +54,11 @@ export function GameBoard() {
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [floatingEmojis, setFloatingEmojis] = useState<ChatMessage[]>([]);
   const trickWinnerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevTrickRef = useRef<TrickCard[]>([]);
   const lastChatCountRef = useRef(0);
+  const lastEmojiCountRef = useRef(0);
   const { toast } = useToast();
 
   const multiplayer = useMultiplayer();
@@ -63,15 +66,34 @@ export function GameBoard() {
   const gameState = isMultiplayerMode && multiplayer.gameState ? multiplayer.gameState : localGameState;
   const mySeatIndex = isMultiplayerMode ? (multiplayer.seatIndex ?? 0) : 0;
   
-  // Track unread chat messages
+  // Track unread chat messages and floating emojis
   useEffect(() => {
     if (!isMultiplayerMode) return;
     const newCount = multiplayer.chatMessages.length;
+    
+    // Handle unread count
     if (newCount > lastChatCountRef.current && !isChatOpen) {
       setUnreadCount(prev => prev + (newCount - lastChatCountRef.current));
     }
+    
+    // Handle floating emojis from new messages
+    if (newCount > lastEmojiCountRef.current) {
+      const newMessages = multiplayer.chatMessages.slice(lastEmojiCountRef.current);
+      const emojiMessages = newMessages.filter(m => m.type === 'emoji' && m.senderId !== gameState.players[mySeatIndex]?.id);
+      
+      if (emojiMessages.length > 0) {
+        setFloatingEmojis(prev => [...prev, ...emojiMessages]);
+        
+        // Remove floating emojis after 2.5 seconds
+        setTimeout(() => {
+          setFloatingEmojis(prev => prev.filter(e => !emojiMessages.find(em => em.id === e.id)));
+        }, 2500);
+      }
+    }
+    
     lastChatCountRef.current = newCount;
-  }, [multiplayer.chatMessages.length, isChatOpen, isMultiplayerMode]);
+    lastEmojiCountRef.current = newCount;
+  }, [multiplayer.chatMessages.length, isChatOpen, isMultiplayerMode, multiplayer.chatMessages, gameState.players, mySeatIndex]);
   
   // Reset unread count when opening chat
   const handleChatToggle = useCallback(() => {
@@ -446,6 +468,13 @@ export function GameBoard() {
   const getTeamForPlayer = (player: typeof humanPlayer) => 
     gameState.teams.find(t => t.id === player.teamId)!;
 
+  // Get floating emoji for a player
+  const getFloatingEmojiForPlayer = (playerId: string, position: 'left' | 'right' | 'top' | 'bottom') => {
+    const emoji = floatingEmojis.find(e => e.senderId === playerId);
+    if (!emoji) return null;
+    return <FloatingEmoji key={emoji.id} emoji={emoji} senderPosition={position} />;
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background game-table" data-testid="game-board">
       <GameHeader 
@@ -515,7 +544,8 @@ export function GameBoard() {
           </div>
         ) : (
         <div className="flex-1 flex flex-col p-2 sm:p-4 md:p-6 gap-2 sm:gap-4 overflow-hidden">
-          <div className="flex justify-center">
+          <div className="flex justify-center relative">
+            {getFloatingEmojiForPlayer(partnerPlayer.id, 'top')}
             <PlayerArea
               player={partnerPlayer}
               team={getTeamForPlayer(partnerPlayer)}
@@ -531,7 +561,8 @@ export function GameBoard() {
 
           <div className="flex-1 flex items-center justify-center gap-2 sm:gap-4">
             {/* Left player chip */}
-            <div className="shrink-0">
+            <div className="shrink-0 relative">
+              {getFloatingEmojiForPlayer(opponent1.id, 'left')}
               <PlayerArea
                 player={opponent1}
                 team={getTeamForPlayer(opponent1)}
@@ -574,7 +605,8 @@ export function GameBoard() {
             </div>
 
             {/* Right player chip */}
-            <div className="shrink-0">
+            <div className="shrink-0 relative">
+              {getFloatingEmojiForPlayer(opponent2.id, 'right')}
               <PlayerArea
                 player={opponent2}
                 team={getTeamForPlayer(opponent2)}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +16,34 @@ const EMOJI_ICONS: Record<string, typeof ThumbsUp> = {
   HandMetal,
   Brain,
 };
+
+const MAX_CHARS = 200;
+
+function formatTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function playNotificationSound() {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.value = 0.1;
+    
+    oscillator.start();
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch (e) {
+    // Audio not supported, silently fail
+  }
+}
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -35,13 +63,47 @@ export function ChatPanel({
   unreadCount 
 }: ChatPanelProps) {
   const [inputValue, setInputValue] = useState('');
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevMessageCountRef = useRef(messages.length);
 
+  // Auto-scroll and handle new message notifications
   useEffect(() => {
     if (scrollRef.current && isOpen) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+    
+    // Play sound for new messages from others
+    if (messages.length > prevMessageCountRef.current) {
+      const newMessages = messages.slice(prevMessageCountRef.current);
+      const hasNewFromOthers = newMessages.some(m => m.senderId !== currentPlayerId);
+      if (hasNewFromOthers && !isOpen) {
+        playNotificationSound();
+      }
+      
+      // Track new message IDs for animation
+      const newIds = newMessages.map(m => m.id);
+      setNewMessageIds(prev => new Set([...Array.from(prev), ...newIds]));
+      
+      // Clear animation after delay
+      setTimeout(() => {
+        setNewMessageIds(prev => {
+          const updated = new Set(Array.from(prev));
+          newIds.forEach(id => updated.delete(id));
+          return updated;
+        });
+      }, 500);
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages, isOpen, currentPlayerId]);
+
+  // Auto-focus input when opening
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
 
   const handleSendText = () => {
     if (inputValue.trim()) {
@@ -106,14 +168,19 @@ export function ChatPanel({
       <ScrollArea className="flex-1 p-3" style={{ minHeight: '200px', maxHeight: '250px' }}>
         <div ref={scrollRef} className="space-y-2">
           {messages.length === 0 ? (
-            <p className="text-center text-muted-foreground text-sm py-4">No messages yet</p>
+            <div className="text-center py-6">
+              <MessageCircle className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-muted-foreground text-sm">No messages yet</p>
+              <p className="text-muted-foreground/70 text-xs mt-1">Say hi to your opponents!</p>
+            </div>
           ) : (
             messages.map((msg) => {
               const isMe = msg.senderId === currentPlayerId;
+              const isNew = newMessageIds.has(msg.id);
               return (
                 <div
                   key={msg.id}
-                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNew ? 'animate-in slide-in-from-bottom-2 duration-300' : ''}`}
                   data-testid={`chat-message-${msg.id}`}
                 >
                   <div
@@ -123,9 +190,14 @@ export function ChatPanel({
                         : 'bg-muted'
                     }`}
                   >
-                    {!isMe && (
-                      <p className="text-xs font-medium mb-1 opacity-70">{msg.senderName}</p>
-                    )}
+                    <div className={`flex items-center gap-2 ${isMe ? 'justify-end' : 'justify-between'}`}>
+                      {!isMe && (
+                        <span className="text-xs font-medium opacity-70">{msg.senderName}</span>
+                      )}
+                      <span className={`text-[10px] opacity-50 ${isMe ? '' : ''}`}>
+                        {formatTimestamp(msg.timestamp)}
+                      </span>
+                    </div>
                     {msg.type === 'emoji' ? (
                       <div className="flex items-center justify-center py-1">
                         {getEmojiIcon(msg.content)}
@@ -160,19 +232,27 @@ export function ChatPanel({
             );
           })}
         </div>
-        <div className="flex gap-2">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            className="flex-1"
-            maxLength={200}
-            data-testid="input-chat-message"
-          />
-          <Button size="icon" onClick={handleSendText} disabled={!inputValue.trim()} data-testid="button-send-chat">
-            <Send className="w-4 h-4" />
-          </Button>
+        <div className="space-y-1">
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value.slice(0, MAX_CHARS))}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message..."
+              className="flex-1"
+              maxLength={MAX_CHARS}
+              data-testid="input-chat-message"
+            />
+            <Button size="icon" onClick={handleSendText} disabled={!inputValue.trim()} data-testid="button-send-chat">
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex justify-end">
+            <span className={`text-[10px] ${inputValue.length > MAX_CHARS - 20 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {inputValue.length}/{MAX_CHARS}
+            </span>
+          </div>
         </div>
       </div>
     </div>
