@@ -40,7 +40,7 @@ import {
   determineTrickWinner,
   checkAutoClaim,
   applyAutoClaim,
-} from '@/lib/gameEngine';
+} from '@shared/gameEngine';
 
 export function GameBoard() {
   const [localGameState, setGameState] = useState<GameState>(() => initializeGame());
