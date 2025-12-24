@@ -13,7 +13,7 @@ import { DealerDrawModal } from './DealerDrawModal';
 import { ActionPrompt } from './ActionPrompt';
 import { MultiplayerLobby } from './MultiplayerLobby';
 import { LastTrickModal } from './LastTrickModal';
-import { ChatPanel, FloatingEmoji } from './ChatPanel';
+import { ChatPanel, FloatingEmoji, initAudioContext } from './ChatPanel';
 import type { ChatMessage } from '@shared/gameTypes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -83,11 +83,6 @@ export function GameBoard() {
       
       if (emojiMessages.length > 0) {
         setFloatingEmojis(prev => [...prev, ...emojiMessages]);
-        
-        // Remove floating emojis after 2.5 seconds
-        setTimeout(() => {
-          setFloatingEmojis(prev => prev.filter(e => !emojiMessages.find(em => em.id === e.id)));
-        }, 2500);
       }
     }
     
@@ -95,8 +90,14 @@ export function GameBoard() {
     lastEmojiCountRef.current = newCount;
   }, [multiplayer.chatMessages.length, isChatOpen, isMultiplayerMode, multiplayer.chatMessages, gameState.players, mySeatIndex]);
   
-  // Reset unread count when opening chat
+  // Remove a floating emoji by ID
+  const removeFloatingEmoji = useCallback((id: string) => {
+    setFloatingEmojis(prev => prev.filter(e => e.id !== id));
+  }, []);
+  
+  // Reset unread count when opening chat, init audio context on user gesture
   const handleChatToggle = useCallback(() => {
+    initAudioContext();
     if (!isChatOpen) {
       setUnreadCount(0);
     }
@@ -472,7 +473,7 @@ export function GameBoard() {
   const getFloatingEmojiForPlayer = (playerId: string, position: 'left' | 'right' | 'top' | 'bottom') => {
     const emoji = floatingEmojis.find(e => e.senderId === playerId);
     if (!emoji) return null;
-    return <FloatingEmoji key={emoji.id} emoji={emoji} senderPosition={position} />;
+    return <FloatingEmoji key={emoji.id} emoji={emoji} senderPosition={position} onComplete={removeFloatingEmoji} />;
   };
 
   return (

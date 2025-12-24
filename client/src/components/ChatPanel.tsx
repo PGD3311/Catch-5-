@@ -24,24 +24,45 @@ function formatTimestamp(timestamp: number): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// Shared audio context for notification sounds
+let sharedAudioContext: AudioContext | null = null;
+let audioContextReady = false;
+
+// Initialize audio context on user gesture
+export function initAudioContext() {
+  if (!sharedAudioContext) {
+    try {
+      sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextReady = true;
+    } catch (e) {
+      // Audio not supported
+    }
+  } else if (sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume().then(() => {
+      audioContextReady = true;
+    });
+  }
+}
+
 function playNotificationSound() {
+  if (!sharedAudioContext || !audioContextReady) return;
+  
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    const oscillator = sharedAudioContext.createOscillator();
+    const gainNode = sharedAudioContext.createGain();
     
     oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    gainNode.connect(sharedAudioContext.destination);
     
     oscillator.frequency.value = 800;
     oscillator.type = 'sine';
-    gainNode.gain.value = 0.1;
+    gainNode.gain.setValueAtTime(0.1, sharedAudioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, sharedAudioContext.currentTime + 0.1);
     
-    oscillator.start();
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-    oscillator.stop(audioContext.currentTime + 0.1);
+    oscillator.start(sharedAudioContext.currentTime);
+    oscillator.stop(sharedAudioContext.currentTime + 0.1);
   } catch (e) {
-    // Audio not supported, silently fail
+    // Audio playback failed
   }
 }
 
@@ -262,15 +283,19 @@ export function ChatPanel({
 interface FloatingEmojiProps {
   emoji: ChatMessage;
   senderPosition: 'left' | 'right' | 'top' | 'bottom';
+  onComplete: (id: string) => void;
 }
 
-export function FloatingEmoji({ emoji, senderPosition }: FloatingEmojiProps) {
+export function FloatingEmoji({ emoji, senderPosition, onComplete }: FloatingEmojiProps) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 2000);
+    const timer = setTimeout(() => {
+      setVisible(false);
+      onComplete(emoji.id);
+    }, 2500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [emoji.id, onComplete]);
 
   if (!visible) return null;
 
