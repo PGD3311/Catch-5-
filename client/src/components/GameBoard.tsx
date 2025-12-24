@@ -677,11 +677,11 @@ export function GameBoard() {
         winnerId={gameState.lastTrickWinnerId || null}
         trumpSuit={gameState.trumpSuit}
       />
-      {isMultiplayerMode && gameState.phase !== 'setup' && (
+      {isMultiplayerMode && gameState.phase !== 'setup' && gameState.players[mySeatIndex] && (
         <ChatPanel
           messages={multiplayer.chatMessages}
           onSendMessage={handleSendChat}
-          currentPlayerId={`player${mySeatIndex + 1}`}
+          currentPlayerId={gameState.players[mySeatIndex].id}
           isOpen={isChatOpen}
           onToggle={handleChatToggle}
           unreadCount={unreadCount}

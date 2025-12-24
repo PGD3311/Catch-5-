@@ -243,6 +243,7 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
       seatIndex: existingPlayer.seatIndex,
       players: getPlayerList(room),
       gameState: room.gameState ? filterGameStateForPlayer(room.gameState, existingPlayer.seatIndex) : null,
+      chatMessages: room.chatMessages,
     }));
     
     broadcastToRoom(room, { type: 'player_reconnected', seatIndex: existingPlayer.seatIndex }, ws);
@@ -774,12 +775,20 @@ async function handleSendChat(ws: WebSocket, message: any) {
     return;
   }
 
+  // Validate and sanitize content
+  const trimmedContent = content.trim();
+  if (!trimmedContent) {
+    return; // Reject empty or whitespace-only messages
+  }
+  
+  const sanitizedContent = trimmedContent.slice(0, 200);
+
   const chatMessage: ChatMessage = {
     id: randomUUID(),
     senderId: `player${player.seatIndex + 1}`,
     senderName: player.playerName,
     type: chatType === 'emoji' ? 'emoji' : 'text',
-    content: content.slice(0, 200), // Limit message length
+    content: sanitizedContent,
     timestamp: Date.now(),
   };
 

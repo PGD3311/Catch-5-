@@ -108,6 +108,7 @@ export function useMultiplayer() {
           seatIndex: message.seatIndex,
           players: message.players,
           gameState: message.gameState,
+          chatMessages: message.chatMessages || prev.chatMessages,
           error: null,
         }));
         break;
