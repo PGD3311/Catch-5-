@@ -242,7 +242,17 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
       // Restore player seat assignments from database (without WebSocket connections)
       // This allows players to rejoin with their original tokens and seat indices
       const storedPlayers = await storage.getPlayersInRoom(storedRoom.id);
+      
+      // Use a Set to track occupied seats and prevent duplicates
+      const occupiedSeats = new Set<number>();
+      
       for (const storedPlayer of storedPlayers) {
+        // Skip if this seat is already occupied (prevent duplicates)
+        if (occupiedSeats.has(storedPlayer.seatIndex)) {
+          log(`Skipping duplicate player at seat ${storedPlayer.seatIndex}`, 'ws');
+          continue;
+        }
+        
         if (storedPlayer.isHuman) {
           // Create placeholder for human players - they'll reconnect with their token
           room.players.set(storedPlayer.playerToken, {
@@ -252,12 +262,16 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
             seatIndex: storedPlayer.seatIndex,
             playerName: storedPlayer.playerName,
           });
+          occupiedSeats.add(storedPlayer.seatIndex);
         } else {
-          // Restore CPU players
-          room.cpuPlayers.push({
-            seatIndex: storedPlayer.seatIndex,
-            playerName: storedPlayer.playerName,
-          });
+          // Restore CPU players (only if not already present)
+          if (!room.cpuPlayers.some(cpu => cpu.seatIndex === storedPlayer.seatIndex)) {
+            room.cpuPlayers.push({
+              seatIndex: storedPlayer.seatIndex,
+              playerName: storedPlayer.playerName,
+            });
+            occupiedSeats.add(storedPlayer.seatIndex);
+          }
         }
       }
       
@@ -566,20 +580,41 @@ async function handleAddCpu(ws: WebSocket, message: any) {
     return;
   }
   
-  const takenSeats = [
-    ...Array.from(room.players.values()).map(p => p.seatIndex),
-    ...room.cpuPlayers.map(cpu => cpu.seatIndex),
-  ];
+  // Check for connected human players at this seat
+  const humanAtSeat = Array.from(room.players.values()).find(
+    p => p.seatIndex === seatIndex && p.ws && p.ws.readyState === WebSocket.OPEN
+  );
   
-  if (takenSeats.includes(seatIndex)) {
-    ws.send(JSON.stringify({ type: 'error', message: 'Seat is already taken' }));
+  if (humanAtSeat) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Seat is already taken by a connected player' }));
     return;
   }
+  
+  // Remove any disconnected human players at this seat
+  const playersToRemove = Array.from(room.players.entries())
+    .filter(([_, p]) => p.seatIndex === seatIndex);
+  for (const [token] of playersToRemove) {
+    room.players.delete(token);
+    log(`Removed disconnected player from seat ${seatIndex}`, 'ws');
+  }
+  
+  // Remove any existing CPU at this seat (shouldn't happen but be safe)
+  room.cpuPlayers = room.cpuPlayers.filter(cpu => cpu.seatIndex !== seatIndex);
 
   const cpuNames = ['CPU Alpha', 'CPU Beta', 'CPU Gamma', 'CPU Delta'];
   room.cpuPlayers.push({
     seatIndex,
     playerName: cpuNames[seatIndex] || `CPU ${seatIndex + 1}`,
+  });
+  
+  // Update database
+  await storage.addPlayerToRoom({
+    roomId: room.id,
+    seatIndex,
+    playerToken: `cpu-${seatIndex}-${room.id}`,
+    playerName: cpuNames[seatIndex] || `CPU ${seatIndex + 1}`,
+    isHuman: false,
+    isConnected: true,
   });
 
   broadcastToRoom(room, {
@@ -772,21 +807,46 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
 }
 
 function getPlayerList(room: GameRoom): { seatIndex: number; playerName: string; connected: boolean; isCpu: boolean }[] {
-  const humanPlayers = Array.from(room.players.values()).map(p => ({
-    seatIndex: p.seatIndex,
-    playerName: p.playerName,
-    connected: p.ws !== null && p.ws.readyState === WebSocket.OPEN,
-    isCpu: false,
-  }));
+  // Build player list, ensuring no duplicate seats
+  const seatMap = new Map<number, { seatIndex: number; playerName: string; connected: boolean; isCpu: boolean }>();
   
-  const cpuPlayersList = room.cpuPlayers.map(cpu => ({
-    seatIndex: cpu.seatIndex,
-    playerName: cpu.playerName,
-    connected: true,
-    isCpu: true,
-  }));
+  // First add CPU players
+  for (const cpu of room.cpuPlayers) {
+    seatMap.set(cpu.seatIndex, {
+      seatIndex: cpu.seatIndex,
+      playerName: cpu.playerName,
+      connected: true,
+      isCpu: true,
+    });
+  }
   
-  return [...humanPlayers, ...cpuPlayersList].sort((a, b) => a.seatIndex - b.seatIndex);
+  // Then add human players (connected ones take priority over disconnected)
+  const humanPlayers = Array.from(room.players.values());
+  
+  // Sort so that connected players come last (and thus overwrite disconnected ones)
+  humanPlayers.sort((a, b) => {
+    const aConnected = a.ws !== null && a.ws.readyState === WebSocket.OPEN;
+    const bConnected = b.ws !== null && b.ws.readyState === WebSocket.OPEN;
+    return (aConnected ? 1 : 0) - (bConnected ? 1 : 0);
+  });
+  
+  for (const p of humanPlayers) {
+    const isConnected = p.ws !== null && p.ws.readyState === WebSocket.OPEN;
+    const existing = seatMap.get(p.seatIndex);
+    
+    // If there's a CPU at this seat, human takes priority
+    // If there's a disconnected human and this is connected, connected wins
+    if (!existing || existing.isCpu || isConnected) {
+      seatMap.set(p.seatIndex, {
+        seatIndex: p.seatIndex,
+        playerName: p.playerName,
+        connected: isConnected,
+        isCpu: false,
+      });
+    }
+  }
+  
+  return Array.from(seatMap.values()).sort((a, b) => a.seatIndex - b.seatIndex);
 }
 
 function filterGameStateForPlayer(state: GameState, seatIndex: number): GameState {
