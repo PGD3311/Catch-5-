@@ -140,6 +140,13 @@ async function handleMessage(ws: WebSocket, message: any) {
 async function handleCreateRoom(ws: WebSocket, message: any) {
   const { playerName, deckColor = 'blue', targetScore = 25 } = message;
   
+  // Require a player name to create a room
+  const trimmedName = playerName?.trim?.() || '';
+  if (!trimmedName) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Please enter your name to create a room' }));
+    return;
+  }
+  
   let code = generateRoomCode();
   while (rooms.has(code)) {
     code = generateRoomCode();
@@ -164,7 +171,7 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
     roomId,
     playerToken,
     seatIndex: 0,
-    playerName: playerName || 'Player 1',
+    playerName: trimmedName,
   };
 
   room.players.set(playerToken, connectedPlayer);
@@ -184,7 +191,7 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
     roomId,
     seatIndex: 0,
     playerToken,
-    playerName: playerName || 'Player 1',
+    playerName: trimmedName,
     isHuman: true,
     isConnected: true,
   });
@@ -197,11 +204,18 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
     players: getPlayerList(room),
   }));
 
-  log(`Room ${code} created by ${playerName}`, 'ws');
+  log(`Room ${code} created by ${trimmedName}`, 'ws');
 }
 
 async function handleJoinRoom(ws: WebSocket, message: any) {
   const { roomCode, playerName, playerToken: existingToken } = message;
+  
+  // Require a player name to join
+  const trimmedName = playerName?.trim?.() || '';
+  if (!trimmedName && !existingToken) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Please enter your name to join' }));
+    return;
+  }
   
   const normalizedCode = roomCode?.toUpperCase?.() || '';
   log(`Join room attempt: code=${normalizedCode}, available rooms: ${Array.from(rooms.keys()).join(', ')}`, 'ws');
@@ -275,7 +289,7 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     roomId: room.id,
     playerToken,
     seatIndex: availableSeat,
-    playerName: playerName || `Player ${availableSeat + 1}`,
+    playerName: trimmedName,
   };
 
   room.players.set(playerToken, connectedPlayer);
@@ -285,7 +299,7 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     roomId: room.id,
     seatIndex: availableSeat,
     playerToken,
-    playerName: playerName || `Player ${availableSeat + 1}`,
+    playerName: trimmedName,
     isHuman: true,
     isConnected: true,
   });
@@ -301,11 +315,11 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
   broadcastToRoom(room, {
     type: 'player_joined',
     seatIndex: availableSeat,
-    playerName: playerName || `Player ${availableSeat + 1}`,
+    playerName: trimmedName,
     players: getPlayerList(room),
   }, ws);
 
-  log(`${playerName} joined room ${room.code}`, 'ws');
+  log(`${trimmedName} joined room ${room.code}`, 'ws');
 }
 
 async function handleStartGame(ws: WebSocket) {
