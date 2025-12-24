@@ -1,11 +1,11 @@
 import { Player, DeckColor, Card as CardType, Team, Suit } from '@shared/gameTypes';
-import { PlayingCard, CardBack } from './PlayingCard';
+import { PlayingCard } from './PlayingCard';
 import { CardDock } from './CardDock';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { User, Bot, Crown, ArrowUpDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface PlayerAreaProps {
   player: Player;
@@ -204,39 +204,14 @@ export function PlayerArea({
     />
   );
 
-  // Desktop card backs for non-bottom players
-  const renderDesktopCardBacks = () => (
-    <div className="hidden sm:flex flex-col items-center">
-      <AnimatePresence mode="popLayout">
-        {player.hand.map((_, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            style={{
-              marginTop: isSide && index > 0 ? '-36px' : undefined,
-              marginLeft: !isSide && index > 0 ? '-28px' : undefined,
-              zIndex: index,
-            }}
-          >
-            <CardBack deckColor={deckColor} small />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-
   return (
     <div className={getContainerClasses()} data-testid={`player-area-${player.id}`}>
       {!isBottom ? (
         <>
           {/* Mobile: minimal chip */}
           <div className="block sm:hidden">{renderMinimalChip()}</div>
-          {/* Desktop: full panel */}
+          {/* Desktop: full panel (no card backs - just the HUD) */}
           <div className="hidden sm:block">{renderFullPanel()}</div>
-          {/* Desktop: card backs */}
-          {renderDesktopCardBacks()}
         </>
       ) : (
         <>
