@@ -134,21 +134,21 @@ export function ScoreModal({
           </motion.div>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-2">
           {bidderTeam && (
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
               className={cn(
-                'p-4 rounded-xl text-center',
+                'p-3 rounded-xl text-center',
                 bidderMadeIt
                   ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/40'
                   : 'bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/40'
               )}
               data-testid="display-bidder-result"
             >
-              <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="flex items-center justify-center gap-2 mb-1">
                 {bidderMadeIt ? (
                   <TrendingUp className="w-5 h-5 text-emerald-400" />
                 ) : (
@@ -167,25 +167,28 @@ export function ScoreModal({
 
           {/* Point Categories - High, Low, Jack, Five, Game */}
           {roundScoreDetails && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg text-center">Points Won</h3>
-              <div className="grid grid-cols-5 gap-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-base text-center">Points Won</h3>
+              <div className="grid grid-cols-5 gap-1.5">
                 {[
                   { key: 'high', label: 'High', points: 1 },
                   { key: 'low', label: 'Low', points: 1 },
                   { key: 'jack', label: 'Jack', points: 1 },
                   { key: 'five', label: 'Five', points: 5 },
                   { key: 'game', label: 'Game', points: 1 },
-                ].map(({ key, label, points }) => {
+                ].map(({ key, label, points }, index) => {
                   const winner = roundScoreDetails[key as keyof RoundScoreDetails] as { teamId: string; card?: any; points?: number } | null;
                   const winningTeam = winner ? teams.find(t => t.id === winner.teamId) : null;
                   const isTeam1 = winningTeam?.id === 'team1';
                   
                   return (
-                    <div
+                    <motion.div
                       key={key}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.15 + index * 0.08, type: "spring", stiffness: 400 }}
                       className={cn(
-                        'flex flex-col items-center p-3 rounded-lg border',
+                        'flex flex-col items-center p-2 rounded-lg border',
                         winner 
                           ? isTeam1 
                             ? 'bg-blue-500/20 border-blue-500/50' 
@@ -194,32 +197,42 @@ export function ScoreModal({
                       )}
                       data-testid={`point-category-${key}`}
                     >
-                      <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>
-                      <span className={cn(
-                        'text-lg font-bold',
-                        winner 
-                          ? isTeam1 
-                            ? 'text-blue-400' 
-                            : 'text-orange-400'
-                          : 'text-muted-foreground'
-                      )}>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+                      <motion.span 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.3 + index * 0.08, type: "spring", stiffness: 500 }}
+                        className={cn(
+                          'text-lg font-bold',
+                          winner 
+                            ? isTeam1 
+                              ? 'text-blue-400' 
+                              : 'text-orange-400'
+                            : 'text-muted-foreground'
+                        )}
+                      >
                         {winner ? `+${points}` : '-'}
-                      </span>
+                      </motion.span>
                       {winningTeam && (
-                        <span className="text-xs text-muted-foreground truncate max-w-full">
+                        <span className="text-[10px] text-muted-foreground truncate max-w-full">
                           {winningTeam.name.replace('Team ', 'T')}
                         </span>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
               
               {/* Game Point Breakdown */}
               {roundScoreDetails.gameBreakdown && (
-                <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <h4 className="text-sm font-medium text-center mb-2">Game Point Breakdown</h4>
-                  <div className="grid grid-cols-2 gap-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-2 p-2 rounded-lg bg-muted/30 border border-border/50"
+                >
+                  <h4 className="text-xs font-medium text-center mb-1.5 text-muted-foreground">Game Point Breakdown</h4>
+                  <div className="grid grid-cols-2 gap-2">
                     {teams.map((team) => {
                       const breakdown = roundScoreDetails.gameBreakdown[team.id];
                       const isTeam1 = team.id === 'team1';
@@ -239,7 +252,7 @@ export function ScoreModal({
                         <div
                           key={team.id}
                           className={cn(
-                            'p-2 rounded-md text-center',
+                            'p-1.5 rounded-md text-center',
                             isWinner 
                               ? isTeam1 
                                 ? 'bg-blue-500/20 ring-1 ring-blue-500/50' 
@@ -249,16 +262,16 @@ export function ScoreModal({
                           data-testid={`game-breakdown-${team.id}`}
                         >
                           <div className={cn(
-                            'text-xs font-medium mb-1',
+                            'text-[10px] font-medium',
                             isTeam1 ? 'text-blue-400' : 'text-orange-400'
                           )}>
                             {team.name}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[10px] text-muted-foreground">
                             {formatBreakdown()}
                           </div>
                           <div className={cn(
-                            'text-sm font-bold mt-1',
+                            'text-xs font-bold',
                             isWinner && (isTeam1 ? 'text-blue-400' : 'text-orange-400')
                           )}>
                             = {breakdown.total} pts
@@ -268,22 +281,27 @@ export function ScoreModal({
                     })}
                   </div>
                   {!roundScoreDetails.game && (
-                    <div className="text-xs text-center text-muted-foreground mt-2">
+                    <div className="text-[10px] text-center text-muted-foreground mt-1">
                       Tie - no Game point awarded
                     </div>
                   )}
-                </div>
+                </motion.div>
               )}
             </div>
           )}
 
           {/* Slept Cards */}
           {sleptCards.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm text-muted-foreground">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="space-y-1"
+            >
+              <h3 className="font-medium text-xs text-muted-foreground">
                 Slept Cards ({sleptCards.length})
               </h3>
-              <div className="flex flex-wrap gap-1 p-2 rounded-lg bg-muted/30 border border-border/50">
+              <div className="flex flex-wrap gap-1.5 p-1.5 rounded-lg bg-muted/30 border border-border/50">
                 {SUITS.map(suit => {
                   const cardsOfSuit = sleptCards.filter(c => c.suit === suit);
                   if (cardsOfSuit.length === 0) return null;
@@ -303,14 +321,14 @@ export function ScoreModal({
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
           )}
 
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">
+          <div className="space-y-2">
+            <h3 className="font-semibold text-base">
               {isGameOver ? 'Final Standings' : 'Team Totals'}
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {sortedTeams.map((team, index) => {
                 const roundScore = roundScores[team.id] || 0;
                 const isBidderTeam = team.id === bidderTeam?.id;
@@ -318,29 +336,32 @@ export function ScoreModal({
                 const teamPlayers = players.filter(p => p.teamId === team.id);
 
                 return (
-                  <div
+                  <motion.div
                     key={team.id}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
                     className={cn(
-                      'w-full flex items-center justify-between p-4 rounded-lg',
+                      'w-full flex items-center justify-between p-3 rounded-lg',
                       'bg-muted/50',
                       isGameOver && index === 0 && 'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-400'
                     )}
                     data-testid={`score-row-${team.id}`}
                   >
-                    <div className="flex flex-col gap-1 text-left">
+                    <div className="flex flex-col gap-0.5 text-left">
                       <div className="flex items-center gap-2">
                         {isGameOver && index === 0 && (
-                          <Trophy className="w-5 h-5 text-amber-500" />
+                          <Trophy className="w-4 h-4 text-amber-500" />
                         )}
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{team.name}</span>
+                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="font-medium text-sm">{team.name}</span>
                         {isBidderTeam && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                             Bidder
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] text-muted-foreground">
                         {teamPlayers.map(p => p.name).join(' & ')}
                       </span>
                     </div>
@@ -357,11 +378,11 @@ export function ScoreModal({
                         </span>
                       )}
                       <div className="text-right">
-                        <span className="text-2xl font-bold">{team.score}</span>
+                        <span className="text-xl font-bold">{team.score}</span>
                         <span className="text-xs text-muted-foreground">/{targetScore}</span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
