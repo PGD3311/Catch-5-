@@ -530,6 +530,7 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
       break;
     case 'purge_draw_complete':
       newState = gameEngine.performPurgeAndDraw(newState);
+      log(`sleptCards after purge: ${newState.sleptCards?.length || 0} cards`, 'ws');
       break;
     case 'sort_hand': {
       const SUIT_ORDER: Record<string, number> = { 'Clubs': 0, 'Diamonds': 1, 'Hearts': 2, 'Spades': 3 };
