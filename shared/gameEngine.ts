@@ -710,6 +710,7 @@ export function performPurgeAndDraw(state: GameState): GameState {
     for (let i = 0; i < cardsToDraw; i++) {
       if (stock.length === 0 && discardPile.length > 0) {
         // Shuffle purged non-trump cards back into stock
+        console.log(`[DRAW FROM DISCARD] Stock empty, shuffling ${discardPile.length} discarded cards back for ${player.name}`);
         stock = shuffleDeck(discardPile);
         discardPile = [];
         usedPurgedCards = true;
@@ -844,6 +845,7 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
 
     for (let i = 0; i < cardsToDraw; i++) {
       if (stock.length === 0 && discardPile.length > 0) {
+        console.log(`[DRAW FROM DISCARD] Stock empty, shuffling ${discardPile.length} discarded cards back for ${p.name}`);
         stock = shuffleDeck(discardPile);
         discardPile = [];
         usedPurgedCards = true;
@@ -864,6 +866,31 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
 
   // Slept cards are ONLY the remaining undrawn stock cards
   const sleptCards = [...stock];
+
+  // VALIDATION: Check for exactly 52 unique cards after discard-trump draw
+  const allCardIds = new Set<string>();
+  const duplicates: string[] = [];
+  
+  for (const p of playersForDraw) {
+    for (const c of p.hand) {
+      if (allCardIds.has(c.id)) duplicates.push(c.id);
+      allCardIds.add(c.id);
+    }
+  }
+  for (const c of stock) {
+    if (allCardIds.has(c.id)) duplicates.push(c.id);
+    allCardIds.add(c.id);
+  }
+  for (const c of discardPile) {
+    if (allCardIds.has(c.id)) duplicates.push(c.id);
+    allCardIds.add(c.id);
+  }
+  
+  const handTotal = playersForDraw.reduce((sum, p) => sum + p.hand.length, 0);
+  console.log(`[CARD VALIDATION] After discard-trump draw: ${allCardIds.size} unique cards, ${handTotal} in hands, ${stock.length} in stock, ${discardPile.length} in discard`);
+  if (duplicates.length > 0) {
+    console.error(`[CARD VALIDATION] DUPLICATES FOUND: ${duplicates.join(', ')}`);
+  }
 
   return {
     ...state,
