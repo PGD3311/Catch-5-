@@ -851,15 +851,14 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room) return;
 
-  // During an active game, don't delete the player - just mark them as disconnected
-  // This preserves their seat assignment so they can reconnect with the same token
+  // Always mark player as disconnected but keep their seat assignment
+  // This allows them to rejoin with the same token whether in lobby or game
+  player.ws = null as any; // Mark as disconnected but keep seat
+  
   if (room.gameState) {
-    player.ws = null as any; // Mark as disconnected but keep seat
     log(`Player ${player.playerName} disconnected from active game in room ${room.code}`, 'ws');
   } else {
-    // No active game, safe to delete the player
-    room.players.delete(player.playerToken);
-    log(`Player ${player.playerName} left room ${room.code}`, 'ws');
+    log(`Player ${player.playerName} disconnected from lobby in room ${room.code}`, 'ws');
   }
   
   broadcastToRoom(room, {
@@ -868,12 +867,14 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
     players: getPlayerList(room),
   });
 
-  // Only delete room if ALL players are fully disconnected (no players left at all)
+  // Only delete room from memory if ALL players are fully disconnected
+  // Keep it in the database so players can rejoin with the room code
   const connectedPlayers = Array.from(room.players.values()).filter(p => p.ws !== null);
-  if (connectedPlayers.length === 0 && !room.gameState) {
+  if (connectedPlayers.length === 0 && room.cpuPlayers.length === 0) {
+    // Remove from memory cache (will be restored from DB when someone joins)
     rooms.delete(room.code);
-    storage.deleteRoom(room.id);
-    log(`Room ${room.code} deleted (empty)`, 'ws');
+    log(`Room ${room.code} removed from memory (no connected players)`, 'ws');
+    // Note: Room persists in database for future rejoin attempts
   }
 }
 
