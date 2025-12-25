@@ -61,6 +61,7 @@ export interface GameState {
   autoClaimerId?: string | null;
   playersNeedingDiscard?: number[];
   sleptCards?: Card[];
+  usedPurgedCards?: boolean;
 }
 
 export type DeckColor = 'red' | 'blue' | 'green' | 'purple' | 'gold' | 'black' | 'teal' | 'rose' | 'orange' | 'indigo' | 'crimson' | 'navy';

@@ -692,17 +692,40 @@ export function performPurgeAndDraw(state: GameState): GameState {
     (bidderIndex + 3) % 4,
   ];
 
+  // Track all cards that have been drawn to prevent duplicates
+  const drawnCardIds = new Set<string>();
+  // Track all cards already in player hands
+  for (const p of newPlayers) {
+    for (const c of p.hand) {
+      drawnCardIds.add(c.id);
+    }
+  }
+
+  let usedPurgedCards = false;
+
   for (const playerIndex of drawOrder) {
     const player = newPlayers[playerIndex];
     const cardsToDraw = FINAL_HAND_SIZE - player.hand.length;
 
     for (let i = 0; i < cardsToDraw; i++) {
       if (stock.length === 0 && discardPile.length > 0) {
+        // Shuffle purged non-trump cards back into stock
         stock = shuffleDeck(discardPile);
         discardPile = [];
+        usedPurgedCards = true;
       }
       if (stock.length > 0) {
-        player.hand.push(stock.pop()!);
+        // Find a card that hasn't been drawn yet (safety check)
+        let card = stock.pop()!;
+        while (drawnCardIds.has(card.id) && stock.length > 0) {
+          // Skip duplicate card (shouldn't happen, but safety measure)
+          console.warn(`Duplicate card detected: ${card.id}, skipping`);
+          card = stock.pop()!;
+        }
+        if (!drawnCardIds.has(card.id)) {
+          drawnCardIds.add(card.id);
+          player.hand.push(card);
+        }
       }
     }
   }
@@ -716,6 +739,7 @@ export function performPurgeAndDraw(state: GameState): GameState {
     stock,
     discardPile,
     sleptCards,
+    usedPurgedCards, // Flag to notify players
     phase: 'playing',
     currentPlayerIndex: bidderIndex,
     leadPlayerIndex: bidderIndex,
@@ -773,6 +797,16 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
     (bidderIndex + 3) % 4,
   ];
 
+  // Track all cards that have been drawn to prevent duplicates
+  const drawnCardIds = new Set<string>();
+  for (const p of playersForDraw) {
+    for (const c of p.hand) {
+      drawnCardIds.add(c.id);
+    }
+  }
+
+  let usedPurgedCards = false;
+
   for (const pIndex of drawOrder) {
     const p = playersForDraw[pIndex];
     const cardsToDraw = FINAL_HAND_SIZE - p.hand.length;
@@ -781,9 +815,18 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
       if (stock.length === 0 && discardPile.length > 0) {
         stock = shuffleDeck(discardPile);
         discardPile = [];
+        usedPurgedCards = true;
       }
       if (stock.length > 0) {
-        p.hand.push(stock.pop()!);
+        let card = stock.pop()!;
+        while (drawnCardIds.has(card.id) && stock.length > 0) {
+          console.warn(`Duplicate card detected: ${card.id}, skipping`);
+          card = stock.pop()!;
+        }
+        if (!drawnCardIds.has(card.id)) {
+          drawnCardIds.add(card.id);
+          p.hand.push(card);
+        }
       }
     }
   }
@@ -797,6 +840,7 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
     stock,
     discardPile,
     sleptCards,
+    usedPurgedCards,
     playersNeedingDiscard: [],
     phase: 'playing',
     currentPlayerIndex: bidderIndex,
