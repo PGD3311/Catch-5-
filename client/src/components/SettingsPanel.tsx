@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { DeckColor, DECK_COLORS } from '@shared/gameTypes';
 import { cn } from '@/lib/utils';
-import { RefreshCw, HelpCircle, User, Bot, LogOut } from 'lucide-react';
+import { RefreshCw, HelpCircle, User, Bot, LogOut, Volume2, VolumeX } from 'lucide-react';
+import { useSound } from '@/hooks/useSoundEffects';
 
 interface PlayerConfig {
   id: string;
@@ -40,6 +42,7 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const teamLabels = ['Your Team', 'Opponents', 'Your Team', 'Opponents'];
   const seatLabels = ['Seat 1', 'Seat 2', 'Seat 3', 'Seat 4'];
+  const { isMuted, toggleMute, playSound } = useSound();
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -101,6 +104,32 @@ export function SettingsPanel({
             <p className="text-xs text-muted-foreground">
               Tap the icon to toggle Human/CPU
             </p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Sound Effects</Label>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/40">
+              <div className="flex items-center gap-2">
+                {isMuted ? (
+                  <VolumeX className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-primary" />
+                )}
+                <span className="text-sm">{isMuted ? 'Sound Off' : 'Sound On'}</span>
+              </div>
+              <Switch
+                checked={!isMuted}
+                onCheckedChange={() => {
+                  toggleMute();
+                  if (isMuted) {
+                    setTimeout(() => playSound('buttonClick'), 50);
+                  }
+                }}
+                data-testid="toggle-sound"
+              />
+            </div>
           </div>
 
           <Separator />

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useToast } from '@/hooks/use-toast';
+import { useSound } from '@/hooks/useSoundEffects';
 import { History } from 'lucide-react';
 import {
   initializeGame,
@@ -66,6 +67,7 @@ export function GameBoard() {
   const { toast } = useToast();
 
   const multiplayer = useMultiplayer();
+  const { playSound } = useSound();
   const isMultiplayerMode = !!multiplayer.roomCode;
   const gameState = isMultiplayerMode && multiplayer.gameState ? multiplayer.gameState : localGameState;
   const mySeatIndex = isMultiplayerMode ? (multiplayer.seatIndex ?? 0) : 0;
@@ -195,6 +197,7 @@ export function GameBoard() {
   }, [isMultiplayerMode, multiplayer]);
 
   const handleCardPlay = useCallback((card: CardType) => {
+    playSound('cardPlay');
     if (isMultiplayerMode) {
       multiplayer.sendAction('play_card', { card });
     } else {
@@ -212,6 +215,8 @@ export function GameBoard() {
       
       if (newTrick.length === 4 && gameState.trumpSuit) {
         setDisplayTrick(newTrick);
+        // Play trick won sound after a short delay
+        setTimeout(() => playSound('trickWon'), 300);
         
         if (trickWinnerTimeoutRef.current) {
           clearTimeout(trickWinnerTimeoutRef.current);
@@ -224,7 +229,7 @@ export function GameBoard() {
         setGameState(prev => playCard(prev, card));
       }
     }
-  }, [isMultiplayerMode, multiplayer, toast, gameState.players, gameState.currentPlayerIndex, gameState.currentTrick, gameState.trumpSuit]);
+  }, [isMultiplayerMode, multiplayer, toast, gameState.players, gameState.currentPlayerIndex, gameState.currentTrick, gameState.trumpSuit, playSound]);
 
   const handleDiscardTrump = useCallback((card: CardType) => {
     if (isMultiplayerMode) {
@@ -563,6 +568,28 @@ export function GameBoard() {
   // Delay score modal if we're still showing the final trick
   const showScoreModal = (gameState.phase === 'scoring' || gameState.phase === 'game-over') && displayTrick.length === 0;
   const showBidResults = gameState.phase === 'bidding' || gameState.phase === 'trump-selection' || gameState.phase === 'purge-draw';
+
+  // Play sounds when score modal opens
+  const prevShowScoreModalRef = useRef(false);
+  useEffect(() => {
+    if (showScoreModal && !prevShowScoreModalRef.current) {
+      const isGameOverNow = checkGameOver(gameState);
+      const bidderTeam = gameState.teams.find(t => 
+        gameState.players.find(p => p.id === gameState.bidderId)?.teamId === t.id
+      );
+      const bidderTeamScore = bidderTeam ? gameState.roundScores[bidderTeam.id] || 0 : 0;
+      const bidderMadeIt = bidderTeamScore >= gameState.highBid;
+      const yourTeam = gameState.teams.find(t => t.id === 'team1');
+      const yourTeamWins = yourTeam && yourTeam.score >= gameState.targetScore;
+
+      if (isGameOverNow) {
+        setTimeout(() => playSound(yourTeamWins ? 'victory' : 'defeat'), 300);
+      } else {
+        setTimeout(() => playSound(bidderMadeIt ? 'bidMade' : 'bidSet'), 300);
+      }
+    }
+    prevShowScoreModalRef.current = showScoreModal;
+  }, [showScoreModal, gameState, playSound]);
 
   const getTeamForPlayer = (player: typeof humanPlayer) => 
     gameState.teams.find(t => t.id === player.teamId)!;
