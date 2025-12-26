@@ -187,9 +187,10 @@ export function ScoreModal({
                   { key: 'five', label: 'Five', points: 5 },
                   { key: 'game', label: 'Game', points: 1 },
                 ].map(({ key, label, points }, index) => {
-                  const winner = roundScoreDetails[key as keyof RoundScoreDetails] as { teamId: string; card?: any; points?: number } | null;
+                  const winner = roundScoreDetails[key as keyof RoundScoreDetails] as { teamId: string; card?: Card; points?: number } | null;
                   const winningTeam = winner ? teams.find(t => t.id === winner.teamId) : null;
                   const isTeam1 = winningTeam?.id === 'team1';
+                  const winningCard = winner?.card;
                   
                   return (
                     <motion.div
@@ -198,7 +199,7 @@ export function ScoreModal({
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ delay: 0.15 + index * 0.08, type: "spring", stiffness: 400 }}
                       className={cn(
-                        'flex flex-col items-center p-2 rounded-lg border',
+                        'flex flex-col items-center p-2 rounded-lg border min-h-[72px] justify-between',
                         winner 
                           ? isTeam1 
                             ? 'bg-blue-500/20 border-blue-500/50' 
@@ -207,25 +208,39 @@ export function ScoreModal({
                       )}
                       data-testid={`point-category-${key}`}
                     >
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
-                      <motion.span 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.3 + index * 0.08, type: "spring", stiffness: 500 }}
-                        className={cn(
-                          'text-lg font-bold',
-                          winner 
-                            ? isTeam1 
-                              ? 'text-blue-400' 
-                              : 'text-orange-400'
-                            : 'text-muted-foreground'
-                        )}
-                      >
-                        {winner ? `+${points}` : '-'}
-                      </motion.span>
+                      <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">{label}</span>
+                      {winningCard && key !== 'game' ? (
+                        <div className="flex items-center gap-0.5">
+                          <span className={cn("text-base font-bold", suitColor[winningCard.suit])}>
+                            {winningCard.rank}
+                          </span>
+                          <span className={cn("text-sm", suitColor[winningCard.suit])}>
+                            {suitSymbol[winningCard.suit]}
+                          </span>
+                        </div>
+                      ) : (
+                        <motion.span 
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.3 + index * 0.08, type: "spring", stiffness: 500 }}
+                          className={cn(
+                            'text-lg font-bold',
+                            winner 
+                              ? isTeam1 
+                                ? 'text-blue-400' 
+                                : 'text-orange-400'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {winner ? `+${points}` : '-'}
+                        </motion.span>
+                      )}
                       {winningTeam && (
-                        <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                          {winningTeam.name.replace('Team ', 'T')}
+                        <span className={cn(
+                          "text-[11px] font-medium",
+                          isTeam1 ? 'text-blue-400' : 'text-orange-400'
+                        )}>
+                          {isTeam1 ? 'You' : 'Opp'}
                         </span>
                       )}
                     </motion.div>
@@ -239,10 +254,10 @@ export function ScoreModal({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-2 p-2 rounded-lg bg-muted/30 border border-border/50"
+                  className="mt-3 p-3 rounded-lg bg-muted/30 border border-border/50"
                 >
-                  <h4 className="text-xs font-medium text-center mb-1.5 text-muted-foreground">Game Point Breakdown</h4>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h4 className="text-xs font-semibold text-center mb-2 text-muted-foreground uppercase tracking-wide">Game Point Breakdown</h4>
+                  <div className="grid grid-cols-2 gap-3">
                     {teams.map((team) => {
                       const breakdown = roundScoreDetails.gameBreakdown[team.id];
                       const isTeam1 = team.id === 'team1';
@@ -250,11 +265,11 @@ export function ScoreModal({
                       
                       const formatBreakdown = () => {
                         const parts: string[] = [];
-                        if (breakdown.aces > 0) parts.push(`${breakdown.aces} A`);
-                        if (breakdown.kings > 0) parts.push(`${breakdown.kings} K`);
-                        if (breakdown.queens > 0) parts.push(`${breakdown.queens} Q`);
-                        if (breakdown.jacks > 0) parts.push(`${breakdown.jacks} J`);
-                        if (breakdown.tens > 0) parts.push(`${breakdown.tens} 10`);
+                        if (breakdown.aces > 0) parts.push(`${breakdown.aces} Ace${breakdown.aces > 1 ? 's' : ''}`);
+                        if (breakdown.kings > 0) parts.push(`${breakdown.kings} King${breakdown.kings > 1 ? 's' : ''}`);
+                        if (breakdown.queens > 0) parts.push(`${breakdown.queens} Queen${breakdown.queens > 1 ? 's' : ''}`);
+                        if (breakdown.jacks > 0) parts.push(`${breakdown.jacks} Jack${breakdown.jacks > 1 ? 's' : ''}`);
+                        if (breakdown.tens > 0) parts.push(`${breakdown.tens} Ten${breakdown.tens > 1 ? 's' : ''}`);
                         return parts.length > 0 ? parts.join(', ') : 'None';
                       };
                       
@@ -262,7 +277,7 @@ export function ScoreModal({
                         <div
                           key={team.id}
                           className={cn(
-                            'p-1.5 rounded-md text-center',
+                            'p-2 rounded-lg text-center',
                             isWinner 
                               ? isTeam1 
                                 ? 'bg-blue-500/20 ring-1 ring-blue-500/50' 
@@ -272,16 +287,16 @@ export function ScoreModal({
                           data-testid={`game-breakdown-${team.id}`}
                         >
                           <div className={cn(
-                            'text-[10px] font-medium',
+                            'text-xs font-semibold mb-1',
                             isTeam1 ? 'text-blue-400' : 'text-orange-400'
                           )}>
-                            {team.name}
+                            {isTeam1 ? 'Your Team' : 'Opponents'}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground leading-relaxed">
                             {formatBreakdown()}
                           </div>
                           <div className={cn(
-                            'text-xs font-bold',
+                            'text-sm font-bold mt-1',
                             isWinner && (isTeam1 ? 'text-blue-400' : 'text-orange-400')
                           )}>
                             = {breakdown.total} pts
@@ -291,7 +306,7 @@ export function ScoreModal({
                     })}
                   </div>
                   {!roundScoreDetails.game && (
-                    <div className="text-[10px] text-center text-muted-foreground mt-1">
+                    <div className="text-xs text-center text-muted-foreground mt-2 italic">
                       Tie - no Game point awarded
                     </div>
                   )}
@@ -359,19 +374,24 @@ export function ScoreModal({
                     data-testid={`score-row-${team.id}`}
                   >
                     <div className="flex flex-col gap-0.5 text-left">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {isGameOver && index === 0 && (
                           <Trophy className="w-4 h-4 text-amber-500" />
                         )}
-                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-medium text-sm">{team.name}</span>
+                        <div className={cn(
+                          "w-2.5 h-2.5 rounded-full",
+                          team.id === 'team1' ? 'bg-blue-500' : 'bg-orange-500'
+                        )} />
+                        <span className="font-semibold text-sm">
+                          {team.id === 'team1' ? 'Your Team' : 'Opponents'}
+                        </span>
                         {isBidderTeam && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            Bidder
+                            Bid {highBid}
                           </Badge>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground ml-4">
                         {teamPlayers.map(p => p.name).join(' & ')}
                       </span>
                     </div>
