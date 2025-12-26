@@ -20,6 +20,13 @@ export function TurnTimer({
   const [isWarning, setIsWarning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasTimedOut = useRef(false);
+  // Store callback in ref to avoid resetting timer when callback changes
+  const onTimeoutRef = useRef(onTimeout);
+  
+  // Keep ref updated with latest callback
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
 
   useEffect(() => {
     if (isActive) {
@@ -35,7 +42,7 @@ export function TurnTimer({
           }
           if (newTime <= 0 && !hasTimedOut.current) {
             hasTimedOut.current = true;
-            onTimeout?.();
+            onTimeoutRef.current?.();
             return 0;
           }
           return Math.max(0, newTime);
@@ -53,7 +60,7 @@ export function TurnTimer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isActive, duration, onTimeout]);
+  }, [isActive, duration]);
 
   if (!isActive) return null;
 
