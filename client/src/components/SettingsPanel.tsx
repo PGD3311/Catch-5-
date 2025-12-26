@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { DeckColor, DECK_COLORS } from '@shared/gameTypes';
 import { cn } from '@/lib/utils';
-import { RefreshCw, HelpCircle, User, Bot } from 'lucide-react';
+import { RefreshCw, HelpCircle, User, Bot, LogOut } from 'lucide-react';
 
 interface PlayerConfig {
   id: string;
@@ -19,6 +19,7 @@ interface SettingsPanelProps {
   deckColor: DeckColor;
   onDeckColorChange: (color: DeckColor) => void;
   onNewGame: () => void;
+  onExitGame: () => void;
   onShowRules: () => void;
   playerConfigs: PlayerConfig[];
   onTogglePlayerType: (playerId: string) => void;
@@ -31,6 +32,7 @@ export function SettingsPanel({
   deckColor,
   onDeckColorChange,
   onNewGame,
+  onExitGame,
   onShowRules,
   playerConfigs,
   onTogglePlayerType,
@@ -159,6 +161,16 @@ export function SettingsPanel({
             >
               <RefreshCw className="w-4 h-4" />
               New Game
+            </Button>
+
+            <Button
+              variant="destructive"
+              className="w-full justify-start gap-2"
+              onClick={onExitGame}
+              data-testid="button-exit-game"
+            >
+              <LogOut className="w-4 h-4" />
+              Exit Game
             </Button>
           </div>
         </div>

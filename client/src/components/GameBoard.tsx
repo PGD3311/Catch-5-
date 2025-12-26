@@ -252,6 +252,15 @@ export function GameBoard() {
     setSettingsOpen(false);
   }, []);
 
+  const handleExitGame = useCallback(() => {
+    if (isMultiplayerMode) {
+      multiplayer.leaveRoom();
+    }
+    setGameState(prev => initializeGame(prev.deckColor, prev.targetScore));
+    setSettingsOpen(false);
+    setShowMultiplayerLobby(true);
+  }, [isMultiplayerMode, multiplayer]);
+
   const handleSortHand = useCallback(() => {
     if (isMultiplayerMode) {
       multiplayer.sendAction('sort_hand', {});
@@ -798,6 +807,7 @@ export function GameBoard() {
         deckColor={gameState.deckColor}
         onDeckColorChange={(color) => setGameState(prev => ({ ...prev, deckColor: color }))}
         onNewGame={handleNewGame}
+        onExitGame={handleExitGame}
         onShowRules={() => {
           setSettingsOpen(false);
           setRulesOpen(true);
