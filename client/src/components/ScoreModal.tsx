@@ -90,10 +90,20 @@ export function ScoreModal({
   const bidderTeam = teams.find(t => t.id === bidder?.teamId);
   const bidderTeamScore = bidderTeam ? roundScores[bidderTeam.id] || 0 : 0;
   const bidderMadeIt = bidderTeamScore >= highBid;
+  const isBidderYourTeam = bidderTeam?.id === 'team1';
 
   const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
   const winningTeam = isGameOver ? sortedTeams[0] : null;
   const isYourTeamWinning = winningTeam?.id === 'team1';
+  
+  // Team-contextual message for bid outcome
+  const getBidOutcomeMessage = () => {
+    if (isBidderYourTeam) {
+      return bidderMadeIt ? 'Your team made it!' : 'Your team went set!';
+    } else {
+      return bidderMadeIt ? 'Opponents made their bid!' : 'Opponents went set!';
+    }
+  };
 
   return (
     <Dialog open={open}>
@@ -155,7 +165,7 @@ export function ScoreModal({
                   <TrendingDown className="w-5 h-5 text-red-400" />
                 )}
                 <span className="font-bold text-lg" data-testid="text-bidder-outcome">
-                  {bidderTeam.name} {bidderMadeIt ? 'made it!' : 'went set!'}
+                  {getBidOutcomeMessage()}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground" data-testid="text-bid-summary">
