@@ -149,7 +149,8 @@ function handlePreviewRoom(ws: WebSocket, message: any) {
     return;
   }
   
-  if (room.gameState) {
+  // Only block if game is actively in progress (not setup/game-over phases)
+  if (room.gameState && room.gameState.phase !== 'setup' && room.gameState.phase !== 'game-over') {
     ws.send(JSON.stringify({ type: 'error', message: 'Game already in progress' }));
     return;
   }
@@ -867,10 +868,28 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
     players: getPlayerList(room),
   });
 
-  // Only delete room from memory if ALL players are fully disconnected
-  // Keep it in the database so players can rejoin with the room code
+  // Check if ALL human players are disconnected
   const connectedPlayers = Array.from(room.players.values()).filter(p => p.ws !== null);
-  if (connectedPlayers.length === 0 && room.cpuPlayers.length === 0) {
+  
+  if (connectedPlayers.length === 0) {
+    // No human players connected - reset the room to waiting state
+    // This allows new players to join without "game in progress" error
+    if (room.gameState) {
+      log(`Resetting room ${room.code} to waiting state (no connected humans)`, 'ws');
+      room.gameState = null;
+      room.chatMessages = [];
+    }
+    
+    // Clear CPUs and player slots so room is fresh
+    room.cpuPlayers = [];
+    room.players.clear();
+    
+    // Update database to reflect reset state
+    storage.updateRoom(room.id, { 
+      gameState: null, 
+      status: 'waiting' 
+    }).catch(err => log(`Failed to reset room in DB: ${err}`, 'ws'));
+    
     // Remove from memory cache (will be restored from DB when someone joins)
     rooms.delete(room.code);
     log(`Room ${room.code} removed from memory (no connected players)`, 'ws');
