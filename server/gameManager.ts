@@ -858,11 +858,14 @@ async function handleRandomizeTeams(ws: WebSocket) {
   log(`Teams randomized in room ${room.code}`, 'ws');
 }
 
+// Track room cleanup timers
+const roomCleanupTimers = new Map<string, NodeJS.Timeout>();
+
 function handlePlayerDisconnect(player: ConnectedPlayer) {
   const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
   if (!room) return;
 
-  // Always mark player as disconnected but keep their seat assignment
+  // Always mark player as disconnected but keep their seat assignment and token
   // This allows them to rejoin with the same token whether in lobby or game
   player.ws = null as any; // Mark as disconnected but keep seat
   
@@ -882,28 +885,55 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
   const connectedPlayers = Array.from(room.players.values()).filter(p => p.ws !== null);
   
   if (connectedPlayers.length === 0) {
-    // No human players connected - reset the room to waiting state
-    // This allows new players to join without "game in progress" error
-    if (room.gameState) {
-      log(`Resetting room ${room.code} to waiting state (no connected humans)`, 'ws');
-      room.gameState = null;
-      room.chatMessages = [];
+    log(`All players disconnected from room ${room.code}, starting cleanup timer (1 hour)`, 'ws');
+    
+    // Cancel any existing cleanup timer
+    const existingTimer = roomCleanupTimers.get(room.code);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
     
-    // Clear CPUs and player slots so room is fresh
-    room.cpuPlayers = [];
-    room.players.clear();
+    // Set a 1-hour cleanup timer - room stays available for reconnection during this time
+    const cleanupTimer = setTimeout(() => {
+      // Check again if room is still empty
+      const currentRoom = rooms.get(room.code);
+      if (currentRoom) {
+        const stillConnected = Array.from(currentRoom.players.values()).filter(p => p.ws !== null);
+        if (stillConnected.length === 0) {
+          log(`Cleaning up room ${room.code} after 1 hour of inactivity`, 'ws');
+          
+          // Reset room state but keep it in memory for a bit longer
+          if (currentRoom.gameState) {
+            currentRoom.gameState = null;
+            currentRoom.chatMessages = [];
+          }
+          currentRoom.cpuPlayers = [];
+          currentRoom.players.clear();
+          
+          // Update database
+          storage.updateRoom(currentRoom.id, { 
+            gameState: null, 
+            status: 'waiting' 
+          }).catch(err => log(`Failed to reset room in DB: ${err}`, 'ws'));
+          
+          // Remove from memory
+          rooms.delete(room.code);
+          roomCleanupTimers.delete(room.code);
+          log(`Room ${room.code} removed from memory after cleanup`, 'ws');
+        }
+      }
+      roomCleanupTimers.delete(room.code);
+    }, 60 * 60 * 1000); // 1 hour
     
-    // Update database to reflect reset state
-    storage.updateRoom(room.id, { 
-      gameState: null, 
-      status: 'waiting' 
-    }).catch(err => log(`Failed to reset room in DB: ${err}`, 'ws'));
-    
-    // Remove from memory cache (will be restored from DB when someone joins)
-    rooms.delete(room.code);
-    log(`Room ${room.code} removed from memory (no connected players)`, 'ws');
-    // Note: Room persists in database for future rejoin attempts
+    roomCleanupTimers.set(room.code, cleanupTimer);
+  } else {
+    // Someone is still connected, cancel any cleanup timer
+    const existingTimer = roomCleanupTimers.get(room.code);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      roomCleanupTimers.delete(room.code);
+      log(`Cleanup timer cancelled for room ${room.code} - player still connected`, 'ws');
+    }
   }
 }
 
