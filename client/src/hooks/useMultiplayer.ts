@@ -56,11 +56,12 @@ export function useMultiplayer() {
         }));
       }
       
+      // Send pings every 20 seconds to keep connection alive through proxies/mobile networks
       const pingInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
         }
-      }, 25000);
+      }, 20000);
       
       (ws as any).pingInterval = pingInterval;
     };

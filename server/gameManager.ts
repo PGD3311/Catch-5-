@@ -57,6 +57,8 @@ export function initializeWebSocket(server: any): WebSocketServer {
         const message = JSON.parse(data.toString());
         
         if (message.type === 'ping') {
+          // Mark connection as alive when we receive application-level ping
+          (ws as any).isAlive = true;
           ws.send(JSON.stringify({ type: 'pong' }));
           return;
         }
@@ -78,20 +80,28 @@ export function initializeWebSocket(server: any): WebSocketServer {
     });
   });
 
+  // Heartbeat every 45 seconds, with 2-miss tolerance for mobile connections
   const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws: WebSocket) => {
+      const missCount = (ws as any).missCount || 0;
       if ((ws as any).isAlive === false) {
-        const player = playerConnections.get(ws);
-        if (player) {
-          handlePlayerDisconnect(player);
-          playerConnections.delete(ws);
+        (ws as any).missCount = missCount + 1;
+        // Allow 2 missed heartbeats before terminating (90 seconds tolerance)
+        if (missCount >= 2) {
+          const player = playerConnections.get(ws);
+          if (player) {
+            handlePlayerDisconnect(player);
+            playerConnections.delete(ws);
+          }
+          return ws.terminate();
         }
-        return ws.terminate();
+      } else {
+        (ws as any).missCount = 0;
       }
       (ws as any).isAlive = false;
       ws.ping();
     });
-  }, 30000);
+  }, 45000);
 
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
