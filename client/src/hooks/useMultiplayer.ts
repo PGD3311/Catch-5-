@@ -189,6 +189,22 @@ export function useMultiplayer() {
         }
         setState(prev => ({ ...prev, error: message.message }));
         break;
+
+      case 'kicked':
+        // Clear session and reset state when kicked by host
+        sessionStorage.removeItem('playerToken');
+        sessionStorage.removeItem('roomCode');
+        sessionStorage.removeItem('playerName');
+        setState(prev => ({
+          ...prev,
+          roomCode: null,
+          playerToken: null,
+          seatIndex: null,
+          players: [],
+          gameState: null,
+          error: message.message || 'You have been removed from the room',
+        }));
+        break;
       
       case 'pong':
         break;
@@ -321,6 +337,12 @@ export function useMultiplayer() {
     }
   }, []);
 
+  const kickPlayer = useCallback((seatIndex: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'kick_player', seatIndex }));
+    }
+  }, []);
+
   const sendChat = useCallback((content: string, chatType: 'text' | 'emoji') => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
@@ -343,6 +365,7 @@ export function useMultiplayer() {
     removeCpu,
     swapSeats,
     randomizeTeams,
+    kickPlayer,
     sendChat,
   };
 }

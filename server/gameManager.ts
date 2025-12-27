@@ -133,6 +133,9 @@ async function handleMessage(ws: WebSocket, message: any) {
     case 'remove_cpu':
       await handleRemoveCpu(ws, message);
       break;
+    case 'kick_player':
+      await handleKickPlayer(ws, message);
+      break;
     case 'swap_seats':
       await handleSwapSeats(ws, message);
       break;
@@ -743,6 +746,83 @@ async function handleRemoveCpu(ws: WebSocket, message: any) {
   });
 
   log(`CPU removed from seat ${seatIndex} in room ${room.code}`, 'ws');
+}
+
+async function handleKickPlayer(ws: WebSocket, message: any) {
+  const player = playerConnections.get(ws);
+  if (!player) return;
+
+  const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
+  if (!room) return;
+
+  // Only host (seat 0) can kick players
+  if (player.seatIndex !== 0) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Only the host can remove players' }));
+    return;
+  }
+
+  // Can't kick during a game
+  if (room.gameState) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Cannot remove players during game' }));
+    return;
+  }
+
+  const { seatIndex } = message;
+  
+  if (typeof seatIndex !== 'number' || seatIndex < 0 || seatIndex > 3) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid seat index' }));
+    return;
+  }
+
+  // Can't kick yourself
+  if (seatIndex === 0) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Cannot remove yourself' }));
+    return;
+  }
+
+  // Find the player at this seat
+  const targetPlayer = Array.from(room.players.entries()).find(([_, p]) => p.seatIndex === seatIndex);
+  
+  if (!targetPlayer) {
+    // Maybe it's a CPU?
+    const cpuIndex = room.cpuPlayers.findIndex(cpu => cpu.seatIndex === seatIndex);
+    if (cpuIndex !== -1) {
+      room.cpuPlayers.splice(cpuIndex, 1);
+    } else {
+      ws.send(JSON.stringify({ type: 'error', message: 'No player at this seat' }));
+      return;
+    }
+  } else {
+    const [token, kickedPlayer] = targetPlayer;
+    
+    // Notify the kicked player
+    if (kickedPlayer.ws && kickedPlayer.ws.readyState === WebSocket.OPEN) {
+      kickedPlayer.ws.send(JSON.stringify({ 
+        type: 'kicked', 
+        message: 'You have been removed from the room by the host',
+        clearSession: true
+      }));
+    }
+    
+    // Remove from playerConnections map
+    if (kickedPlayer.ws) {
+      playerConnections.delete(kickedPlayer.ws);
+    }
+    
+    // Remove from room
+    room.players.delete(token);
+    
+    log(`Player ${kickedPlayer.playerName} kicked from room ${room.code}`, 'ws');
+  }
+
+  // Broadcast updated player list
+  broadcastToRoom(room, {
+    type: 'player_disconnected',
+    seatIndex,
+    players: getPlayerList(room),
+  });
+
+  log(`Player removed from seat ${seatIndex} in room ${room.code}`, 'ws');
 }
 
 async function handleSwapSeats(ws: WebSocket, message: any) {

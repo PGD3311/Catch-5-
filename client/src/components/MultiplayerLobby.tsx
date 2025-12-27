@@ -27,6 +27,7 @@ interface MultiplayerLobbyProps {
   onClose: () => void;
   onAddCpu: (seatIndex: number) => void;
   onRemoveCpu: (seatIndex: number) => void;
+  onKickPlayer: (seatIndex: number) => void;
   onSwapSeats: (seat1: number, seat2: number) => void;
   onRandomizeTeams: () => void;
   deckColor: DeckColor;
@@ -47,6 +48,7 @@ export function MultiplayerLobby({
   onClose,
   onAddCpu,
   onRemoveCpu,
+  onKickPlayer,
   onSwapSeats,
   onRandomizeTeams,
   deckColor,
@@ -269,16 +271,20 @@ export function MultiplayerLobby({
                             <ArrowLeftRight className="w-3 h-3 text-amber-400 shrink-0" />
                           )}
                         </div>
-                        {player.isCpu && isHost && (
+                        {isHost && !isCurrentPlayer && (
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-6 w-6 shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onRemoveCpu(seat);
+                              if (player.isCpu) {
+                                onRemoveCpu(seat);
+                              } else {
+                                onKickPlayer(seat);
+                              }
                             }}
-                            data-testid={`button-remove-cpu-${seat}`}
+                            data-testid={`button-remove-player-${seat}`}
                           >
                             <LogOut className="w-3 h-3" />
                           </Button>
