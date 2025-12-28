@@ -482,6 +482,9 @@ async function handleStartGame(ws: WebSocket) {
 
   state = gameEngine.startDealerDraw(state);
   room.gameState = state;
+  
+  // Validate no duplicate cards at game start
+  gameEngine.validateNoDuplicates(state, 'after game start/dealer draw');
 
   broadcastGameState(room);
   log(`Game started in room ${room.code}`, 'ws');
@@ -582,6 +585,10 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
   }
 
   room.gameState = newState;
+  
+  // Validate no duplicate cards after every action
+  gameEngine.validateNoDuplicates(newState, `after action: ${action}`);
+  
   broadcastGameState(room);
 
   await processCpuTurns(room);
@@ -637,6 +644,10 @@ async function processCpuTurns(room: GameRoom) {
     }
     
     room.gameState = state;
+    
+    // Validate no duplicate cards after every CPU action
+    gameEngine.validateNoDuplicates(state, `after CPU action in phase: ${state.phase}`);
+    
     broadcastGameState(room);
     
     // If a trick just completed (was 3 cards, now reset to 0), add extra delay for animation

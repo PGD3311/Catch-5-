@@ -22,6 +22,56 @@ import {
 
 export { determineTrickWinner };
 
+export function validateNoDuplicates(state: GameState, context: string): void {
+  const allCardIds = new Map<string, string>();
+  const duplicates: { cardId: string; locations: string[] }[] = [];
+  
+  const addCard = (cardId: string, location: string) => {
+    if (allCardIds.has(cardId)) {
+      const existing = duplicates.find(d => d.cardId === cardId);
+      if (existing) {
+        existing.locations.push(location);
+      } else {
+        duplicates.push({ cardId, locations: [allCardIds.get(cardId)!, location] });
+      }
+    } else {
+      allCardIds.set(cardId, location);
+    }
+  };
+  
+  for (const player of state.players) {
+    for (const card of player.hand) {
+      addCard(card.id, `${player.name}'s hand`);
+    }
+    for (const card of player.tricksWon) {
+      addCard(card.id, `${player.name}'s tricksWon`);
+    }
+  }
+  
+  for (const card of state.stock || []) {
+    addCard(card.id, 'stock');
+  }
+  
+  for (const card of state.discardPile || []) {
+    addCard(card.id, 'discardPile');
+  }
+  
+  for (const play of state.currentTrick) {
+    addCard(play.card.id, 'currentTrick');
+  }
+  
+  for (const play of state.lastTrick || []) {
+    addCard(play.card.id, 'lastTrick');
+  }
+  
+  if (duplicates.length > 0) {
+    console.error(`[DUPLICATE CARDS DETECTED] Context: ${context}`);
+    for (const dup of duplicates) {
+      console.error(`  Card ${dup.cardId} found in: ${dup.locations.join(', ')}`);
+    }
+  }
+}
+
 export function checkAutoClaim(players: Player[], trumpSuit: Suit | null, stock: Card[] = []): { claimerId: string; remainingTricks: number } | null {
   if (!trumpSuit) return null;
   
@@ -139,6 +189,13 @@ export function finalizeDealerDraw(state: GameState): GameState {
 
 export function dealCards(state: GameState): GameState {
   const deck = shuffleDeck(createDeck());
+  
+  // Validate deck has exactly 52 unique cards
+  const deckIds = new Set(deck.map(c => c.id));
+  if (deckIds.size !== 52) {
+    console.error(`[DECK ERROR] Created deck has ${deckIds.size} unique cards instead of 52`);
+  }
+  
   const newPlayers = state.players.map((player, index) => ({
     ...player,
     hand: deck.slice(index * INITIAL_HAND_SIZE, (index + 1) * INITIAL_HAND_SIZE),
@@ -149,7 +206,7 @@ export function dealCards(state: GameState): GameState {
   const stock = deck.slice(4 * INITIAL_HAND_SIZE);
   const firstBidderIndex = (state.dealerIndex + 1) % 4;
 
-  return {
+  const newState: GameState = {
     ...state,
     phase: 'bidding',
     players: newPlayers,
@@ -158,11 +215,18 @@ export function dealCards(state: GameState): GameState {
     highBid: 0,
     bidderId: null,
     currentTrick: [],
+    lastTrick: [],
     trickNumber: 1,
     roundScores: {},
     stock,
     discardPile: [],
+    sleptCards: [],
   };
+  
+  // Validate no duplicates after deal
+  validateNoDuplicates(newState, 'after dealCards');
+  
+  return newState;
 }
 
 function evaluateSuitStrength(hand: Card[], suit: Suit): { 
