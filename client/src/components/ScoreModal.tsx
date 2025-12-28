@@ -57,6 +57,7 @@ interface ScoreModalProps {
   targetScore: number;
   sleptCards?: Card[];
   trumpSuit?: string | null;
+  localTeamId?: string;
 }
 
 const suitSymbol: Record<string, string> = {
@@ -86,6 +87,7 @@ export function ScoreModal({
   targetScore,
   sleptCards = [],
   trumpSuit,
+  localTeamId = 'team1',
 }: ScoreModalProps) {
   const [canContinue, setCanContinue] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -114,11 +116,11 @@ export function ScoreModal({
   const bidderTeam = teams.find(t => t.id === bidder?.teamId);
   const bidderTeamScore = bidderTeam ? roundScores[bidderTeam.id] || 0 : 0;
   const bidderMadeIt = bidderTeamScore >= highBid;
-  const isBidderYourTeam = bidderTeam?.id === 'team1';
+  const isBidderYourTeam = bidderTeam?.id === localTeamId;
 
   const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
   const winningTeam = isGameOver ? sortedTeams[0] : null;
-  const isYourTeamWinning = winningTeam?.id === 'team1';
+  const isYourTeamWinning = winningTeam?.id === localTeamId;
   
   // Team-contextual message for bid outcome
   const getBidOutcomeMessage = () => {

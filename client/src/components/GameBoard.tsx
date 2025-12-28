@@ -829,6 +829,7 @@ export function GameBoard() {
         targetScore={gameState.targetScore}
         sleptCards={gameState.sleptCards}
         trumpSuit={gameState.trumpSuit}
+        localTeamId={gameState.players[mySeatIndex]?.teamId || 'team1'}
       />
       <SettingsPanel
         open={settingsOpen}
