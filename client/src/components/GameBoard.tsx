@@ -713,9 +713,9 @@ export function GameBoard() {
                 {(gameState.phase === 'bidding' || gameState.phase === 'playing') && (
                   <TurnTimer
                     key={timerKey}
-                    isActive={isMyTurn}
+                    isActive={true}
                     duration={20}
-                    onTimeout={handleTurnTimeout}
+                    onTimeout={isMyTurn ? handleTurnTimeout : undefined}
                     playerName={currentPlayer?.name}
                     isCurrentPlayer={isMyTurn}
                   />
