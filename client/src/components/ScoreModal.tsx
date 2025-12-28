@@ -123,9 +123,13 @@ export function ScoreModal({
   // Team-contextual message for bid outcome
   const getBidOutcomeMessage = () => {
     if (isBidderYourTeam) {
-      return bidderMadeIt ? 'Your team made it!' : 'Your team went set!';
+      return bidderMadeIt 
+        ? 'Your team made the bid!' 
+        : 'Your team was SET!';
     } else {
-      return bidderMadeIt ? 'Opponents made their bid!' : 'Opponents went set!';
+      return bidderMadeIt 
+        ? 'Opponents made their bid' 
+        : 'Opponents were SET!';
     }
   };
 

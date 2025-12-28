@@ -204,14 +204,17 @@ export function SoundProvider({ children }: { children: ReactNode }) {
 
     switch (type) {
       case 'cardPlay':
-        playNoise(0.08, { volume: 0.25, filterFreq: 3000, attack: 0.002, decay: 0.078 });
-        playNoise(0.04, { volume: 0.15, filterFreq: 800, filterType: 'bandpass', delay: 0.01 });
-        playRichTone(180, 0.05, { type: 'triangle', volume: 0.12, attack: 0.002, release: 0.03 });
+        // Satisfying card slap sound
+        playNoise(0.1, { volume: 0.35, filterFreq: 2500, attack: 0.001, decay: 0.099 });
+        playNoise(0.06, { volume: 0.2, filterFreq: 600, filterType: 'bandpass', delay: 0.005 });
+        playRichTone(150, 0.06, { type: 'triangle', volume: 0.15, attack: 0.001, release: 0.04 });
+        playRichTone(100, 0.04, { type: 'sine', volume: 0.1, attack: 0.001, delay: 0.02 });
         break;
 
       case 'cardDeal':
-        playNoise(0.06, { volume: 0.18, filterFreq: 2500, attack: 0.001, decay: 0.059 });
-        playRichTone(220, 0.03, { type: 'triangle', volume: 0.08, attack: 0.001 });
+        // Quick card flip
+        playNoise(0.07, { volume: 0.22, filterFreq: 3000, attack: 0.001, decay: 0.069 });
+        playRichTone(250, 0.04, { type: 'triangle', volume: 0.1, attack: 0.001 });
         break;
 
       case 'shuffle':
@@ -225,73 +228,81 @@ export function SoundProvider({ children }: { children: ReactNode }) {
         break;
 
       case 'trickWon':
-        playRichTone(523, 0.12, { volume: 0.22, attack: 0.01, harmonics: [0.4, 0.2] });
-        playRichTone(659, 0.12, { volume: 0.24, delay: 0.1, attack: 0.01, harmonics: [0.4, 0.2] });
-        playRichTone(784, 0.18, { volume: 0.28, delay: 0.2, attack: 0.01, harmonics: [0.5, 0.25, 0.1] });
-        playNoise(0.08, { volume: 0.08, filterFreq: 4000, delay: 0.2 });
+        // Satisfying sweep/collect sound
+        playNoise(0.12, { volume: 0.12, filterFreq: 1500, attack: 0.01, decay: 0.11 });
+        playRichTone(440, 0.1, { volume: 0.2, attack: 0.01, harmonics: [0.5, 0.25] });
+        playRichTone(554, 0.1, { volume: 0.22, delay: 0.08, attack: 0.01, harmonics: [0.5, 0.25] });
+        playRichTone(659, 0.15, { volume: 0.25, delay: 0.16, attack: 0.01, harmonics: [0.6, 0.3, 0.1] });
         break;
 
       case 'bidMade':
-        playChord([523, 659, 784], 0.15, { volume: 0.18, stagger: 0.03, attack: 0.02 });
-        playRichTone(1047, 0.35, { 
+        // Triumphant fanfare for making the bid
+        playRichTone(523, 0.12, { volume: 0.2, attack: 0.01, harmonics: [0.5, 0.25] });
+        playRichTone(659, 0.12, { volume: 0.22, delay: 0.1, attack: 0.01, harmonics: [0.5, 0.25] });
+        playRichTone(784, 0.12, { volume: 0.24, delay: 0.2, attack: 0.01, harmonics: [0.5, 0.25] });
+        playChord([1047, 1319, 1568], 0.4, { 
           volume: 0.28, 
-          delay: 0.25, 
-          attack: 0.02, 
-          decay: 0.1,
-          sustain: 0.6,
-          release: 0.15,
-          harmonics: [0.5, 0.3, 0.15] 
+          delay: 0.35, 
+          stagger: 0.02,
+          attack: 0.01
         });
-        playNoise(0.15, { volume: 0.06, filterFreq: 6000, delay: 0.25 });
+        playNoise(0.2, { volume: 0.08, filterFreq: 6000, delay: 0.35 });
         break;
 
       case 'bidSet':
-        playRichTone(392, 0.18, { volume: 0.22, harmonics: [0.3, 0.15], pan: -0.3 });
-        playRichTone(311, 0.2, { volume: 0.24, delay: 0.15, harmonics: [0.3, 0.15] });
-        playChord([196, 233, 294], 0.4, { 
-          volume: 0.2, 
-          delay: 0.32, 
+        // Dramatic descending "failure" sound
+        playRichTone(440, 0.2, { volume: 0.25, harmonics: [0.4, 0.2], type: 'sine' });
+        playRichTone(370, 0.22, { volume: 0.27, delay: 0.18, harmonics: [0.4, 0.2] });
+        playRichTone(311, 0.25, { volume: 0.28, delay: 0.38, harmonics: [0.4, 0.2] });
+        playChord([147, 185, 220], 0.5, { 
+          volume: 0.22, 
+          delay: 0.6, 
           attack: 0.02,
-          stagger: 0.02
+          stagger: 0.03
         });
+        // Add a low rumble for impact
+        playRichTone(80, 0.4, { type: 'sine', volume: 0.15, delay: 0.6, attack: 0.05 });
         break;
 
       case 'victory':
+        // Grand victory fanfare
         const victoryNotes = [523, 659, 784, 1047];
         victoryNotes.forEach((freq, i) => {
-          playRichTone(freq, 0.15, { 
-            volume: 0.22 + i * 0.02, 
-            delay: i * 0.12, 
-            harmonics: [0.4, 0.2, 0.1],
-            pan: (i - 1.5) * 0.2
+          playRichTone(freq, 0.18, { 
+            volume: 0.25 + i * 0.02, 
+            delay: i * 0.1, 
+            harmonics: [0.5, 0.3, 0.15],
+            pan: (i - 1.5) * 0.15
           });
         });
         playChord([1047, 1319, 1568], 0.5, { 
-          volume: 0.25, 
-          delay: 0.55, 
-          stagger: 0.02,
-          attack: 0.02,
+          volume: 0.28, 
+          delay: 0.5, 
+          stagger: 0.015,
+          attack: 0.01,
           type: 'sine'
         });
-        playNoise(0.3, { volume: 0.08, filterFreq: 8000, delay: 0.55 });
+        playNoise(0.25, { volume: 0.1, filterFreq: 8000, delay: 0.5 });
         
         setTimeout(() => {
-          playChord([1047, 1319, 1568, 2093], 0.6, { 
-            volume: 0.28, 
-            stagger: 0.015,
+          playChord([1047, 1319, 1568, 2093], 0.7, { 
+            volume: 0.3, 
+            stagger: 0.01,
             attack: 0.01
           });
-        }, 800);
+          playNoise(0.3, { volume: 0.08, filterFreq: 10000 });
+        }, 700);
         break;
 
       case 'defeat':
-        playRichTone(392, 0.25, { volume: 0.2, harmonics: [0.25, 0.12], decay: 0.2 });
-        playRichTone(330, 0.28, { volume: 0.22, delay: 0.22, harmonics: [0.25, 0.12] });
-        playRichTone(277, 0.32, { volume: 0.24, delay: 0.48, harmonics: [0.3, 0.15] });
-        playChord([196, 233, 277], 0.6, { 
-          volume: 0.18, 
-          delay: 0.78, 
-          stagger: 0.03,
+        // Melancholic defeat sound
+        playRichTone(440, 0.3, { volume: 0.22, harmonics: [0.3, 0.15], decay: 0.25 });
+        playRichTone(370, 0.32, { volume: 0.24, delay: 0.28, harmonics: [0.3, 0.15] });
+        playRichTone(311, 0.35, { volume: 0.25, delay: 0.58, harmonics: [0.35, 0.18] });
+        playChord([147, 185, 220], 0.7, { 
+          volume: 0.2, 
+          delay: 0.9, 
+          stagger: 0.04,
           attack: 0.03,
           type: 'sine'
         });
