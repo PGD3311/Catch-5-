@@ -59,7 +59,6 @@ export function GameBoard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [floatingEmojis, setFloatingEmojis] = useState<ChatMessage[]>([]);
-  const [timerKey, setTimerKey] = useState(0);
   const trickWinnerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevTrickRef = useRef<TrickCard[]>([]);
   const lastChatCountRef = useRef(0);
@@ -511,15 +510,6 @@ export function GameBoard() {
   const passedCount = gameState.players.filter(p => p.bid === 0).length;
   const isDealer = gameState.currentPlayerIndex === gameState.dealerIndex;
   
-  // Reset timer when turn changes
-  useEffect(() => {
-    setTimerKey(prev => prev + 1);
-  }, [gameState.currentPlayerIndex, gameState.phase, gameState.trickNumber]);
-  
-  // Timer should be active during bidding and playing phases for human turns
-  const timerActive = (gameState.phase === 'bidding' || gameState.phase === 'playing') && 
-    isMyTurn && !currentPlayer?.isHuman === false;
-  
   // Handle turn timeout - auto-pass in bidding, auto-play lowest card in playing
   const handleTurnTimeout = useCallback(() => {
     if (!isMyTurn) return;
@@ -710,14 +700,15 @@ export function GameBoard() {
               
               {/* Timer and context line */}
               <div className="mt-1 flex flex-col items-center gap-1">
-                {(gameState.phase === 'bidding' || gameState.phase === 'playing') && (
+                {(gameState.phase === 'bidding' || gameState.phase === 'playing') && gameState.turnStartTime && (
                   <TurnTimer
-                    key={timerKey}
+                    key={gameState.turnStartTime}
                     isActive={true}
                     duration={20}
                     onTimeout={isMyTurn ? handleTurnTimeout : undefined}
                     playerName={currentPlayer?.name}
                     isCurrentPlayer={isMyTurn}
+                    serverStartTime={gameState.turnStartTime}
                   />
                 )}
                 <div className="flex items-center gap-2">

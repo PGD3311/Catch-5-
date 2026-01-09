@@ -62,6 +62,7 @@ export interface GameState {
   playersNeedingDiscard?: number[];
   sleptCards?: Card[];
   usedPurgedCards?: boolean;
+  turnStartTime?: number;
 }
 
 export type DeckColor = 'red' | 'blue' | 'green' | 'purple' | 'gold' | 'black' | 'teal' | 'rose' | 'orange' | 'indigo' | 'crimson' | 'navy';

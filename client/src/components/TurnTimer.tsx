@@ -7,6 +7,7 @@ interface TurnTimerProps {
   onTimeout?: () => void;
   playerName?: string;
   isCurrentPlayer?: boolean;
+  serverStartTime?: number;
 }
 
 export function TurnTimer({ 
@@ -14,40 +15,51 @@ export function TurnTimer({
   duration = 20, 
   onTimeout,
   playerName,
-  isCurrentPlayer = false
+  isCurrentPlayer = false,
+  serverStartTime
 }: TurnTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isWarning, setIsWarning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasTimedOut = useRef(false);
-  // Store callback in ref to avoid resetting timer when callback changes
   const onTimeoutRef = useRef(onTimeout);
   
-  // Keep ref updated with latest callback
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
 
   useEffect(() => {
     if (isActive) {
-      setTimeLeft(duration);
-      setIsWarning(false);
       hasTimedOut.current = false;
       
+      // Calculate initial time based on server timestamp
+      const calculateTimeLeft = () => {
+        if (serverStartTime) {
+          const elapsed = Math.floor((Date.now() - serverStartTime) / 1000);
+          return Math.max(0, duration - elapsed);
+        }
+        return duration;
+      };
+      
+      // Set initial time
+      const initialTime = calculateTimeLeft();
+      setTimeLeft(initialTime);
+      setIsWarning(initialTime <= 5);
+      
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          const newTime = prev - 1;
-          if (newTime <= 5) {
-            setIsWarning(true);
-          }
-          if (newTime <= 0 && !hasTimedOut.current) {
-            hasTimedOut.current = true;
-            onTimeoutRef.current?.();
-            return 0;
-          }
-          return Math.max(0, newTime);
-        });
-      }, 1000);
+        const newTime = calculateTimeLeft();
+        setTimeLeft(newTime);
+        
+        if (newTime <= 5) {
+          setIsWarning(true);
+        }
+        
+        // Only trigger timeout callback for the current player
+        if (newTime <= 0 && !hasTimedOut.current && isCurrentPlayer) {
+          hasTimedOut.current = true;
+          onTimeoutRef.current?.();
+        }
+      }, 250); // Update more frequently for accuracy
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -60,7 +72,7 @@ export function TurnTimer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isActive, duration]);
+  }, [isActive, duration, serverStartTime, isCurrentPlayer]);
 
   if (!isActive) return null;
 

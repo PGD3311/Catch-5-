@@ -31,6 +31,10 @@ interface GameRoom {
 
 const rooms = new Map<string, GameRoom>();
 const playerConnections = new Map<WebSocket, ConnectedPlayer>();
+const turnTimers = new Map<string, NodeJS.Timeout>();
+const turnTimerPlayerIndex = new Map<string, number>(); // Track which player the timer is for
+
+const TURN_TIMEOUT_MS = 20000; // 20 seconds per turn
 
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -334,6 +338,11 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     
     log(`Player ${existingPlayer.playerName} rejoined room ${room.code} at seat ${existingPlayer.seatIndex}`, 'ws');
     
+    // If game is in progress, use broadcastGameState to ensure timers are properly managed
+    if (room.gameState) {
+      broadcastGameState(room);
+    }
+    
     ws.send(JSON.stringify({
       type: 'rejoined',
       roomCode: room.code,
@@ -519,7 +528,17 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
     return;
   }
 
+  // Clear turn timer when player takes an action (prevents timeout after action)
+  if (action === 'bid' || action === 'play_card') {
+    clearTurnTimer(room.id);
+  }
+
   let newState = room.gameState;
+  
+  // Clear turn start time when action is taken
+  if (action === 'bid' || action === 'play_card') {
+    newState = { ...newState, turnStartTime: undefined };
+  }
 
   switch (action) {
     case 'finalize_dealer_draw':
@@ -1085,8 +1104,143 @@ function filterGameStateForPlayer(state: GameState, seatIndex: number): GameStat
   };
 }
 
-function broadcastGameState(room: GameRoom) {
+function clearTurnTimer(roomId: string) {
+  const existingTimer = turnTimers.get(roomId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    turnTimers.delete(roomId);
+  }
+  turnTimerPlayerIndex.delete(roomId);
+}
+
+function startTurnTimer(room: GameRoom, preserveExistingTime = false) {
   if (!room.gameState) return;
+  
+  // Clear any existing timer handle (but may preserve the start time)
+  const existingTimer = turnTimers.get(room.id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    turnTimers.delete(room.id);
+  }
+  
+  const state = room.gameState;
+  const currentPlayer = state.players[state.currentPlayerIndex];
+  
+  // Only set timer for human players during bidding or playing phases
+  if (!currentPlayer.isHuman) return;
+  if (state.phase !== 'bidding' && state.phase !== 'playing') return;
+  
+  // Calculate remaining time and turn start time
+  let turnStartTime: number;
+  let remainingMs: number;
+  
+  if (preserveExistingTime && room.gameState.turnStartTime) {
+    // Preserve existing timer - calculate remaining time
+    turnStartTime = room.gameState.turnStartTime;
+    const elapsed = Date.now() - turnStartTime;
+    remainingMs = Math.max(0, TURN_TIMEOUT_MS - elapsed);
+    
+    // If already expired, trigger timeout immediately
+    if (remainingMs <= 0) {
+      handleTurnTimeout(room);
+      return;
+    }
+  } else {
+    // Start fresh timer
+    turnStartTime = Date.now();
+    remainingMs = TURN_TIMEOUT_MS;
+    
+    room.gameState = {
+      ...room.gameState,
+      turnStartTime,
+    };
+  }
+  
+  // Track which player this timer is for
+  turnTimerPlayerIndex.set(room.id, state.currentPlayerIndex);
+  
+  // Create timeout that will auto-move when time expires
+  const timer = setTimeout(() => {
+    handleTurnTimeout(room);
+  }, remainingMs);
+  
+  turnTimers.set(room.id, timer);
+}
+
+async function handleTurnTimeout(room: GameRoom) {
+  // Clear and delete the timer entry first
+  clearTurnTimer(room.id);
+  
+  if (!room.gameState) return;
+  
+  const state = room.gameState;
+  const currentPlayer = state.players[state.currentPlayerIndex];
+  
+  // Double-check it's still a human's turn
+  if (!currentPlayer.isHuman) return;
+  if (state.phase !== 'bidding' && state.phase !== 'playing') return;
+  
+  log(`Turn timeout for ${currentPlayer.name} in room ${room.code}`, 'ws');
+  
+  let newState = { ...state, turnStartTime: undefined };
+  
+  if (state.phase === 'bidding') {
+    // Auto-pass
+    newState = gameEngine.processBid(newState, 0);
+  } else if (state.phase === 'playing') {
+    // Auto-play first valid card
+    const validCard = currentPlayer.hand.find(card => 
+      gameEngine.canPlayCard(card, currentPlayer.hand, state.currentTrick, state.trumpSuit)
+    );
+    if (validCard) {
+      newState = gameEngine.playCard(newState, validCard);
+    }
+  }
+  
+  // Clear turnStartTime so next turn gets a fresh timer
+  newState = { ...newState, turnStartTime: undefined };
+  room.gameState = newState;
+  
+  // Validate no duplicate cards
+  gameEngine.validateNoDuplicates(newState, `after turn timeout for ${currentPlayer.name}`);
+  
+  broadcastGameState(room);
+  
+  // Process CPU turns if needed
+  await processCpuTurns(room);
+}
+
+function broadcastGameState(room: GameRoom, preserveExistingTimer = false) {
+  if (!room.gameState) return;
+  
+  // Start/reset turn timer for human players
+  const currentPlayer = room.gameState.players[room.gameState.currentPlayerIndex];
+  const isTimedPhase = room.gameState.phase === 'bidding' || room.gameState.phase === 'playing';
+  const currentTimerForPlayer = turnTimerPlayerIndex.get(room.id);
+  const hasActiveTimerHandle = turnTimers.has(room.id);
+  
+  if (currentPlayer.isHuman && isTimedPhase) {
+    // Check for restoration scenario first:
+    // If we have a turnStartTime but no timer handle, this is a restoration (reconnect/restart)
+    // We should preserve the existing time rather than starting fresh
+    if (!hasActiveTimerHandle && room.gameState.turnStartTime) {
+      // Timer handle was lost (e.g., reconnect, server restart) - restore with remaining time
+      startTurnTimer(room, true);
+    } else if (currentTimerForPlayer !== undefined && currentTimerForPlayer !== room.gameState.currentPlayerIndex) {
+      // Turn actually changed to a different player - start fresh timer
+      startTurnTimer(room, false);
+    } else if (!room.gameState.turnStartTime) {
+      // No timer running at all - start fresh
+      startTurnTimer(room, false);
+    }
+    // else: timer is already running for current player with active handle, do nothing
+  } else {
+    // Clear timer if it's not a human's timed turn
+    clearTurnTimer(room.id);
+    if (room.gameState.turnStartTime) {
+      room.gameState = { ...room.gameState, turnStartTime: undefined };
+    }
+  }
   
   const players = Array.from(room.players.values());
   for (const player of players) {
