@@ -139,7 +139,7 @@ export function PlayingCard({
       </div>
 
       <div className={cn(
-        'flex-1 flex items-center justify-center relative z-10',
+        'absolute inset-0 flex items-center justify-center z-10',
         suitColor
       )}>
         <div className={cn(
