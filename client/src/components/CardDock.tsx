@@ -50,7 +50,7 @@ export function CardDock({ cards, onCardClick, canPlayCard, isCurrentPlayer, tru
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
       >
-        <div className="flex items-end justify-center gap-0 px-1 sm:px-2 py-2">
+        <div className="flex items-end justify-center gap-0 px-4 sm:px-2 py-2">
           <AnimatePresence mode="popLayout">
             {cards.map((card, index) => (
               <DockCard
