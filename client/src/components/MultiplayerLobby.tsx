@@ -19,8 +19,9 @@ interface MultiplayerLobbyProps {
   seatIndex: number | null;
   players: RoomPlayer[];
   error: string | null;
-  onCreateRoom: (playerName: string, deckColor: DeckColor, targetScore: number) => void;
-  onJoinRoom: (roomCode: string, playerName: string, preferredSeat?: number) => void;
+  userId?: string;
+  onCreateRoom: (playerName: string, deckColor: DeckColor, targetScore: number, userId?: string) => void;
+  onJoinRoom: (roomCode: string, playerName: string, preferredSeat?: number, userId?: string) => void;
   onPreviewRoom: (roomCode: string) => Promise<{ availableSeats: number[]; players: RoomPlayer[] } | null>;
   onStartGame: () => void;
   onLeaveRoom: () => void;
@@ -53,6 +54,7 @@ export function MultiplayerLobby({
   onRandomizeTeams,
   deckColor,
   targetScore,
+  userId,
 }: MultiplayerLobbyProps) {
   const [playerName, setPlayerName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -67,7 +69,7 @@ export function MultiplayerLobby({
 
   const handleCreateRoom = () => {
     if (playerName.trim()) {
-      onCreateRoom(playerName.trim(), deckColor, targetScore);
+      onCreateRoom(playerName.trim(), deckColor, targetScore, userId);
     }
   };
 
@@ -87,7 +89,7 @@ export function MultiplayerLobby({
 
   const handleJoinRoom = () => {
     if (playerName.trim() && joinCode.trim()) {
-      onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), preferredSeat ?? undefined);
+      onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), preferredSeat ?? undefined, userId);
     }
   };
 
@@ -477,7 +479,7 @@ export function MultiplayerLobby({
                   if (!isAvailable || isLoading) return;
                   setPreferredSeat(seat);
                   setIsLoading(true);
-                  onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), seat);
+                  onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), seat, userId);
                 };
                 
                 return (

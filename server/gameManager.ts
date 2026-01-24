@@ -11,8 +11,10 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
   
   const state = room.gameState;
   const newPhase = state.phase;
-  const currentRound = state.roundNumber;
   const gameInstance = room.gameInstanceId || 0;
+  
+  // Create a unique round signature using team scores (changes each round)
+  const roundSignature = state.teams.map(t => t.score).join('-');
   
   // Use separate dedup for scoring vs game-over (both can occur in same round)
   const isScoring = newPhase === 'scoring';
@@ -20,7 +22,7 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
   
   // Check for duplicate round processing (for scoring phase)
   const isScoringAlreadyProcessed = isScoring && 
-    room.lastProcessedRound === currentRound &&
+    room.lastProcessedRoundSignature === roundSignature &&
     room.lastProcessedGame === gameInstance;
   
   // Check for duplicate game-over processing (separate from round processing)
@@ -29,7 +31,7 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
   
   // Prevent duplicate stats updates
   if (isScoringAlreadyProcessed) {
-    log(`Skipping duplicate scoring stats update for round ${currentRound}, game ${gameInstance}`, 'stats');
+    log(`Skipping duplicate scoring stats update for round signature ${roundSignature}, game ${gameInstance}`, 'stats');
     return;
   }
   if (isGameOverAlreadyProcessed) {
@@ -43,7 +45,7 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
     
     // Mark this round/game as processed based on phase type
     if (isScoring) {
-      room.lastProcessedRound = currentRound;
+      room.lastProcessedRoundSignature = roundSignature;
       room.lastProcessedGame = gameInstance;
     }
     if (isGameOver) {
@@ -102,10 +104,10 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
         
         // Only update if we have meaningful increments
         if (Object.keys(increments).length > 0) {
-          // Use player token as a pseudo-userId for now
-          // In a real implementation, we'd link the player to their auth account
-          await storage.incrementUserStats(player.playerToken, increments);
-          log(`Updated stats for player ${player.playerName}`, 'stats');
+          // Use authenticated userId if available, otherwise fall back to playerToken
+          const statsUserId = player.userId || player.playerToken;
+          await storage.incrementUserStats(statsUserId, increments);
+          log(`Updated stats for player ${player.playerName} (userId: ${statsUserId})`, 'stats');
         }
       } catch (err) {
         log(`Error updating stats for ${player.playerName}: ${err}`, 'stats');
@@ -120,6 +122,7 @@ interface ConnectedPlayer {
   playerToken: string;
   seatIndex: number;
   playerName: string;
+  userId?: string; // Authenticated user ID for cross-device stats
 }
 
 interface CpuPlayer {
@@ -136,7 +139,7 @@ interface GameRoom {
   deckColor: DeckColor;
   targetScore: number;
   chatMessages: ChatMessage[];
-  lastProcessedRound?: number; // Prevent duplicate round stats updates
+  lastProcessedRoundSignature?: string; // Prevent duplicate round stats updates
   lastProcessedGame?: number; // Prevent duplicate game stats updates
   lastProcessedGameOver?: number; // Prevent duplicate game-over stats updates
   gameInstanceId?: number; // Track unique game instances
@@ -298,7 +301,7 @@ function handlePreviewRoom(ws: WebSocket, message: any) {
 }
 
 async function handleCreateRoom(ws: WebSocket, message: any) {
-  const { playerName, deckColor = 'blue', targetScore = 25 } = message;
+  const { playerName, deckColor = 'blue', targetScore = 25, userId } = message;
   
   // Require a player name to create a room
   const trimmedName = playerName?.trim?.() || '';
@@ -332,6 +335,7 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
     playerToken,
     seatIndex: 0,
     playerName: trimmedName,
+    userId: userId || undefined,
   };
 
   room.players.set(playerToken, connectedPlayer);
@@ -368,7 +372,7 @@ async function handleCreateRoom(ws: WebSocket, message: any) {
 }
 
 async function handleJoinRoom(ws: WebSocket, message: any) {
-  const { roomCode, playerName, playerToken: existingToken, preferredSeat } = message;
+  const { roomCode, playerName, playerToken: existingToken, preferredSeat, userId } = message;
   
   // Require a player name to join
   const trimmedName = playerName?.trim?.() || '';
@@ -527,6 +531,7 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     playerToken,
     seatIndex: availableSeat,
     playerName: trimmedName,
+    userId: userId || undefined,
   };
 
   room.players.set(playerToken, connectedPlayer);
@@ -579,7 +584,7 @@ async function handleStartGame(ws: WebSocket) {
   
   // Increment game instance ID for dedup tracking
   room.gameInstanceId = (room.gameInstanceId || 0) + 1;
-  room.lastProcessedRound = undefined;
+  room.lastProcessedRoundSignature = undefined;
   room.lastProcessedGame = room.gameInstanceId;
   
   const connectedPlayers = Array.from(room.players.values());
@@ -685,7 +690,7 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
           newState = gameEngine.initializeGame(room.deckColor, room.targetScore);
           // Increment game instance ID for dedup tracking
           room.gameInstanceId = (room.gameInstanceId || 0) + 1;
-          room.lastProcessedRound = undefined;
+          room.lastProcessedRoundSignature = undefined;
           room.lastProcessedGame = room.gameInstanceId;
         } else {
           newState = gameEngine.startNewRound(newState);

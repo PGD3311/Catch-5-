@@ -227,18 +227,19 @@ export function useMultiplayer() {
     };
   }, [connect]);
 
-  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'orange', targetScore: number = 25) => {
+  const createRoom = useCallback((playerName: string, deckColor: DeckColor = 'orange', targetScore: number = 25, userId?: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'create_room',
         playerName,
         deckColor,
         targetScore,
+        userId,
       }));
     }
   }, []);
 
-  const joinRoom = useCallback((roomCode: string, playerName: string, preferredSeat?: number) => {
+  const joinRoom = useCallback((roomCode: string, playerName: string, preferredSeat?: number, userId?: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       // Clear any existing session data before joining a new room
       // to prevent stale token issues
@@ -251,6 +252,7 @@ export function useMultiplayer() {
         roomCode,
         playerName,
         preferredSeat,
+        userId,
       }));
     }
   }, []);
