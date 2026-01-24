@@ -1,21 +1,35 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+// Re-export auth models (users and sessions tables)
+export * from "./models/auth";
+
+// User game statistics
+export const userStats = pgTable("user_stats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  userId: varchar("user_id").notNull().unique(),
+  gamesPlayed: integer("games_played").default(0).notNull(),
+  gamesWon: integer("games_won").default(0).notNull(),
+  bidsMade: integer("bids_made").default(0).notNull(),
+  bidsSucceeded: integer("bids_succeeded").default(0).notNull(),
+  timesSet: integer("times_set").default(0).notNull(),
+  totalPointsScored: integer("total_points_scored").default(0).notNull(),
+  highestBid: integer("highest_bid").default(0).notNull(),
+  highestBidMade: integer("highest_bid_made").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserStatsSchema = createInsertSchema(userStats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type InsertUserStats = z.infer<typeof insertUserStatsSchema>;
+export type UserStats = typeof userStats.$inferSelect;
 
 export const gameRooms = pgTable("game_rooms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

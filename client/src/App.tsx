@@ -6,11 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SoundProvider } from "@/hooks/useSoundEffects";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import Stats from "@/pages/Stats";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/stats" component={Stats} />
       <Route component={NotFound} />
     </Switch>
   );

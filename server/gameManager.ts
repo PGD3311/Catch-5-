@@ -5,6 +5,81 @@ import { log } from './index';
 import type { GameState, Card, Suit, DeckColor, ChatMessage } from '@shared/gameTypes';
 import * as gameEngine from '@shared/gameEngine';
 
+// Track stats for human players when rounds/games complete
+async function trackPlayerStats(room: GameRoom, previousPhase: string) {
+  if (!room.gameState) return;
+  
+  const state = room.gameState;
+  const newPhase = state.phase;
+  
+  // Only track stats when transitioning to scoring or game-over
+  if ((previousPhase !== 'scoring' && previousPhase !== 'game-over') &&
+      (newPhase === 'scoring' || newPhase === 'game-over')) {
+    
+    // Find the bidder
+    const bidder = state.players.find(p => p.id === state.bidderId);
+    const bidderTeam = state.teams.find(t => bidder && state.players.find(pl => pl.id === bidder.id)?.teamId === t.id);
+    
+    // Calculate round scores
+    const bidderTeamScore = bidderTeam ? state.roundScores[bidderTeam.id] || 0 : 0;
+    const bidMade = bidderTeamScore >= state.highBid;
+    
+    // Track stats for each human player in the room
+    for (const player of Array.from(room.players.values())) {
+      try {
+        // Get their player data from game state
+        const gamePlayer = state.players[player.seatIndex];
+        if (!gamePlayer || !gamePlayer.isHuman) continue;
+        
+        // Get team score for this round
+        const playerTeam = state.teams.find(t => t.id === gamePlayer.teamId);
+        const teamRoundScore = playerTeam ? state.roundScores[playerTeam.id] || 0 : 0;
+        
+        // Was this player the bidder?
+        const isBidder = gamePlayer.id === state.bidderId;
+        
+        // Prepare stats increments
+        const increments: Record<string, number> = {
+          totalPointsScored: teamRoundScore,
+        };
+        
+        if (isBidder) {
+          increments.bidsMade = 1;
+          if (bidMade) {
+            increments.bidsSucceeded = 1;
+            if (state.highBid > 0) {
+              increments.highestBidMade = state.highBid;
+            }
+          } else {
+            increments.timesSet = 1;
+          }
+          if (state.highBid > 0) {
+            increments.highestBid = state.highBid;
+          }
+        }
+        
+        // Track game win/loss on game over
+        if (newPhase === 'game-over' && playerTeam) {
+          increments.gamesPlayed = 1;
+          if (playerTeam.score >= state.targetScore) {
+            increments.gamesWon = 1;
+          }
+        }
+        
+        // Only update if we have meaningful increments
+        if (Object.keys(increments).length > 0) {
+          // Use player token as a pseudo-userId for now
+          // In a real implementation, we'd link the player to their auth account
+          await storage.incrementUserStats(player.playerToken, increments);
+          log(`Updated stats for player ${player.playerName}`, 'stats');
+        }
+      } catch (err) {
+        log(`Error updating stats for ${player.playerName}: ${err}`, 'stats');
+      }
+    }
+  }
+}
+
 interface ConnectedPlayer {
   ws: WebSocket;
   roomId: string;
@@ -603,10 +678,18 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
     }
   }
 
+  const previousPhase = room.gameState?.phase || 'setup';
   room.gameState = newState;
   
   // Validate no duplicate cards after every action
   gameEngine.validateNoDuplicates(newState, `after action: ${action}`);
+  
+  // Track stats when phase changes to scoring or game-over from human action
+  const newPhaseStr = newState.phase as string;
+  if ((previousPhase !== 'scoring' && previousPhase !== 'game-over') &&
+      (newPhaseStr === 'scoring' || newPhaseStr === 'game-over')) {
+    await trackPlayerStats(room, previousPhase);
+  }
   
   broadcastGameState(room);
 
@@ -617,10 +700,12 @@ async function processCpuTurns(room: GameRoom) {
   if (!room.gameState) return;
   
   let state = room.gameState;
+  let previousPhase = state.phase;
   
   while (state.phase !== 'scoring' && state.phase !== 'game-over' && state.phase !== 'purge-draw') {
     const currentPlayer = state.players[state.currentPlayerIndex];
     if (currentPlayer.isHuman) break;
+    previousPhase = state.phase;
     
     // Longer delay for CPU actions (1.2-1.5 seconds) for better visual pacing
     const baseDelay = 1200 + Math.random() * 300;
@@ -666,6 +751,14 @@ async function processCpuTurns(room: GameRoom) {
     
     // Validate no duplicate cards after every CPU action
     gameEngine.validateNoDuplicates(state, `after CPU action in phase: ${state.phase}`);
+    
+    // Track stats when phase changes to scoring or game-over
+    const newPhase = state.phase as string;
+    const prevPhaseStr = previousPhase as string;
+    if ((prevPhaseStr !== 'scoring' && prevPhaseStr !== 'game-over') &&
+        (newPhase === 'scoring' || newPhase === 'game-over')) {
+      await trackPlayerStats(room, prevPhaseStr);
+    }
     
     broadcastGameState(room);
     
@@ -1182,23 +1275,20 @@ async function handleTurnTimeout(room: GameRoom) {
   
   log(`Turn timeout for ${currentPlayer.name} in room ${room.code}`, 'ws');
   
-  let newState = { ...state, turnStartTime: undefined };
+  let newState: GameState = { ...state, turnStartTime: undefined };
   
   if (state.phase === 'bidding') {
     // Auto-pass
-    newState = gameEngine.processBid(newState, 0);
+    newState = { ...gameEngine.processBid(newState, 0), turnStartTime: undefined };
   } else if (state.phase === 'playing') {
     // Auto-play first valid card
     const validCard = currentPlayer.hand.find(card => 
       gameEngine.canPlayCard(card, currentPlayer.hand, state.currentTrick, state.trumpSuit)
     );
     if (validCard) {
-      newState = gameEngine.playCard(newState, validCard);
+      newState = { ...gameEngine.playCard(newState, validCard), turnStartTime: undefined };
     }
   }
-  
-  // Clear turnStartTime so next turn gets a fresh timer
-  newState = { ...newState, turnStartTime: undefined };
   room.gameState = newState;
   
   // Validate no duplicate cards
