@@ -50,7 +50,7 @@ export function CardDock({ cards, onCardClick, canPlayCard, isCurrentPlayer, tru
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
       >
-        <div className="flex items-end justify-center gap-0 px-6 sm:px-4 py-2 min-w-fit mx-auto">
+        <div className="flex items-end justify-center px-6 sm:px-4 py-2 min-w-fit mx-auto" style={{ gap: cards.length > 6 ? '-8px' : '-4px' }}>
           <AnimatePresence mode="popLayout">
             {cards.map((card, index) => (
               <DockCard
@@ -98,19 +98,25 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
 
   // Adaptive sizing based on card count - larger for fewer cards, bigger on mobile for touch
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-  const mobileBoost = isMobile ? 4 : 0;
-  const baseWidth = (totalCards <= 5 ? 56 : totalCards <= 7 ? 48 : 44) + mobileBoost;
-  const maxWidth = (totalCards <= 5 ? 72 : totalCards <= 7 ? 64 : 56) + mobileBoost;
-  const magnificationRange = isMobile ? 60 : 70;
+  const mobileBoost = isMobile ? 8 : 0; // Increased for better touch targets
+  const baseWidth = (totalCards <= 4 ? 64 : totalCards <= 6 ? 54 : totalCards <= 8 ? 48 : 44) + mobileBoost;
+  const maxWidth = (totalCards <= 4 ? 80 : totalCards <= 6 ? 70 : totalCards <= 8 ? 62 : 56) + mobileBoost;
+  const magnificationRange = isMobile ? 80 : 90; // Wider range for smoother effect
+  
+  const springConfig = { stiffness: 350, damping: 28, mass: 0.4 }; // Smoother spring
   
   const widthSync = useTransform(distance, [0, magnificationRange], [maxWidth, baseWidth]);
-  const width = useSpring(widthSync, { stiffness: 400, damping: 30, mass: 0.5 });
+  const width = useSpring(widthSync, springConfig);
   
   const heightSync = useTransform(distance, [0, magnificationRange], [maxWidth * 1.4, baseWidth * 1.4]);
-  const height = useSpring(heightSync, { stiffness: 400, damping: 30, mass: 0.5 });
+  const height = useSpring(heightSync, springConfig);
   
-  const ySync = useTransform(distance, [0, magnificationRange], [-12, 0]);
-  const y = useSpring(ySync, { stiffness: 400, damping: 30, mass: 0.5 });
+  const ySync = useTransform(distance, [0, magnificationRange], [-16, 0]); // More lift on hover
+  const y = useSpring(ySync, springConfig);
+  
+  // Z-index increases toward center and on hover for proper stacking
+  const zIndexSync = useTransform(distance, [0, magnificationRange], [30, 10]);
+  const baseZIndex = 10 + index; // Cards stack left-to-right
 
   const isTrump = trumpSuit && card.suit === trumpSuit;
 
@@ -121,7 +127,8 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.5, y: -30 }}
-      style={{ width, height, y }}
+      style={{ width, height, y, zIndex: baseZIndex }}
+      whileHover={{ zIndex: 40 }}
       className="relative flex-shrink-0"
     >
       <motion.button
@@ -162,19 +169,19 @@ function CardContent({ card }: { card: CardType }) {
 
       {/* Top-left rank/suit - LARGER rank for better legibility */}
       <div className={cn('absolute top-0.5 left-1 flex flex-col items-center z-10', suitColor)}>
-        <span className="text-xs sm:text-sm font-black leading-none drop-shadow-sm">{card.rank}</span>
-        <SuitIcon suit={card.suit} className="w-2 h-2 sm:w-2.5 sm:h-2.5 opacity-80" />
+        <span className="text-sm sm:text-base font-black leading-none drop-shadow-sm">{card.rank}</span>
+        <SuitIcon suit={card.suit} className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-90" />
       </div>
 
       {/* Center suit icon */}
       <div className={cn('flex-1 flex items-center justify-center', suitColor)}>
-        <SuitIcon suit={card.suit} className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-md" />
+        <SuitIcon suit={card.suit} className="w-6 h-6 sm:w-8 sm:h-8 drop-shadow-md" />
       </div>
 
       {/* Bottom-right rank/suit (rotated) */}
       <div className={cn('absolute bottom-0.5 right-1 flex flex-col items-center rotate-180 z-10', suitColor)}>
-        <span className="text-xs sm:text-sm font-black leading-none drop-shadow-sm">{card.rank}</span>
-        <SuitIcon suit={card.suit} className="w-2 h-2 sm:w-2.5 sm:h-2.5 opacity-80" />
+        <span className="text-sm sm:text-base font-black leading-none drop-shadow-sm">{card.rank}</span>
+        <SuitIcon suit={card.suit} className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-90" />
       </div>
     </div>
   );
