@@ -22,7 +22,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useToast } from '@/hooks/use-toast';
 import { useSound } from '@/hooks/useSoundEffects';
-import { useAuth } from '@/hooks/use-auth';
 import { History } from 'lucide-react';
 import {
   initializeGame,
@@ -65,7 +64,6 @@ export function GameBoard() {
   const lastChatCountRef = useRef(0);
   const lastEmojiCountRef = useRef(0);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const multiplayer = useMultiplayer();
   const { playSound } = useSound();
@@ -648,7 +646,6 @@ export function GameBoard() {
               onRandomizeTeams={multiplayer.randomizeTeams}
               deckColor={localGameState.deckColor}
               targetScore={localGameState.targetScore}
-              userId={user?.id}
             />
           )}
         </div>

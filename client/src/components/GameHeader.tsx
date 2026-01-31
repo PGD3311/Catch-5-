@@ -1,11 +1,9 @@
 import { GameState, Suit, Team } from '@shared/gameTypes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Settings, Heart, Diamond, Club, Spade, Users, Share2, HelpCircle, History, LogOut, Trophy, LogIn } from 'lucide-react';
+import { Settings, Heart, Diamond, Club, Spade, Share2, HelpCircle, History, LogOut, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/hooks/use-auth';
 import { Link } from 'wouter';
 
 interface GameHeaderProps {
@@ -88,7 +86,6 @@ export function GameHeader({ gameState, onSettingsClick, onShareClick, onRulesCl
   const phaseLabel = getPhaseLabel(gameState.phase, gameState.trickNumber);
   const yourTeam = gameState.teams.find(t => t.id === 'team1');
   const opponentTeam = gameState.teams.find(t => t.id === 'team2');
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   return (
     <header className="flex items-center justify-between gap-2 px-2 py-1.5 sm:px-3 sm:py-2 border-b bg-background/80 backdrop-blur-sm" data-testid="game-header">
@@ -184,25 +181,6 @@ export function GameHeader({ gameState, onSettingsClick, onShareClick, onRulesCl
             <Trophy className="w-4 h-4" />
           </Button>
         </Link>
-        
-        {!authLoading && (
-          isAuthenticated && user ? (
-            <a href="/api/logout">
-              <Avatar className="w-7 h-7 cursor-pointer hover:ring-2 ring-primary/50 transition-all" data-testid="avatar-user">
-                <AvatarImage src={user.profileImageUrl || undefined} />
-                <AvatarFallback className="text-xs">
-                  {user.firstName?.[0] || user.email?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
-            </a>
-          ) : (
-            <a href="/api/login">
-              <Button size="icon" variant="ghost" data-testid="button-login">
-                <LogIn className="w-4 h-4" />
-              </Button>
-            </a>
-          )
-        )}
         
         {onExitGame && gameState.phase !== 'setup' && (
           <Button

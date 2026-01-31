@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Copy, Check, Play, LogOut, Wifi, WifiOff, Bot, UserPlus, Shuffle, ArrowLeftRight } from 'lucide-react';
+import { Users, Copy, Check, Play, LogOut, Wifi, WifiOff, Bot, UserPlus, Shuffle, ArrowLeftRight, KeyRound } from 'lucide-react';
 import type { DeckColor } from '@shared/gameTypes';
+import { isValidPin, getPlayerNameFromPin } from '@shared/pinCodes';
+
+const PIN_STORAGE_KEY = "catch5_pin";
 
 interface RoomPlayer {
   seatIndex: number;
@@ -66,10 +69,22 @@ export function MultiplayerLobby({
   const [previewPlayers, setPreviewPlayers] = useState<RoomPlayer[]>([]);
   const [preferredSeat, setPreferredSeat] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [pinCode, setPinCode] = useState('');
+
+  useEffect(() => {
+    const savedPin = localStorage.getItem(PIN_STORAGE_KEY);
+    if (savedPin && isValidPin(savedPin)) {
+      setPinCode(savedPin);
+      const name = getPlayerNameFromPin(savedPin);
+      if (name) setPlayerName(name);
+    }
+  }, []);
 
   const handleCreateRoom = () => {
     if (playerName.trim()) {
-      onCreateRoom(playerName.trim(), deckColor, targetScore, userId);
+      const statsId = isValidPin(pinCode) ? pinCode : undefined;
+      if (statsId) localStorage.setItem(PIN_STORAGE_KEY, pinCode);
+      onCreateRoom(playerName.trim(), deckColor, targetScore, statsId);
     }
   };
 
@@ -89,7 +104,9 @@ export function MultiplayerLobby({
 
   const handleJoinRoom = () => {
     if (playerName.trim() && joinCode.trim()) {
-      onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), preferredSeat ?? undefined, userId);
+      const statsId = isValidPin(pinCode) ? pinCode : undefined;
+      if (statsId) localStorage.setItem(PIN_STORAGE_KEY, pinCode);
+      onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), preferredSeat ?? undefined, statsId);
     }
   };
 
@@ -412,6 +429,30 @@ export function MultiplayerLobby({
               onChange={(e) => setPlayerName(e.target.value)}
               data-testid="input-player-name-create"
             />
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                placeholder="4-digit stats code (optional)"
+                value={pinCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  setPinCode(val);
+                  if (val.length === 4 && isValidPin(val)) {
+                    const name = getPlayerNameFromPin(val);
+                    if (name) setPlayerName(name);
+                  }
+                }}
+                className="font-mono tracking-widest"
+                data-testid="input-pin-create"
+              />
+            </div>
+            {pinCode.length === 4 && !isValidPin(pinCode) && (
+              <p className="text-xs text-destructive">Invalid code - stats won't be tracked</p>
+            )}
             <Button
               onClick={handleCreateRoom}
               disabled={!playerName.trim()}
@@ -438,6 +479,30 @@ export function MultiplayerLobby({
               onChange={(e) => setPlayerName(e.target.value)}
               data-testid="input-player-name-join"
             />
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                placeholder="4-digit stats code (optional)"
+                value={pinCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  setPinCode(val);
+                  if (val.length === 4 && isValidPin(val)) {
+                    const name = getPlayerNameFromPin(val);
+                    if (name) setPlayerName(name);
+                  }
+                }}
+                className="font-mono tracking-widest"
+                data-testid="input-pin-join"
+              />
+            </div>
+            {pinCode.length === 4 && !isValidPin(pinCode) && (
+              <p className="text-xs text-destructive">Invalid code - stats won't be tracked</p>
+            )}
             <Input
               placeholder="Room code (e.g., ABC123)"
               value={joinCode}
@@ -479,7 +544,9 @@ export function MultiplayerLobby({
                   if (!isAvailable || isLoading) return;
                   setPreferredSeat(seat);
                   setIsLoading(true);
-                  onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), seat, userId);
+                  const statsId = isValidPin(pinCode) ? pinCode : undefined;
+                  if (statsId) localStorage.setItem(PIN_STORAGE_KEY, pinCode);
+                  onJoinRoom(joinCode.trim().toUpperCase(), playerName.trim(), seat, statsId);
                 };
                 
                 return (

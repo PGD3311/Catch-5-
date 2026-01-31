@@ -41,6 +41,7 @@ export interface IStorage {
     highestBidMade?: number;
   }): Promise<UserStats>;
   getLeaderboard(limit: number): Promise<Array<UserStats & { user: User | null }>>;
+  getPinLeaderboard(limit: number): Promise<Array<UserStats & { playerName: string | null }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -179,6 +180,20 @@ export class DatabaseStorage implements IStorage {
     );
     
     return results;
+  }
+
+  async getPinLeaderboard(limit: number): Promise<Array<UserStats & { playerName: string | null }>> {
+    const { PIN_CODES } = await import("@shared/pinCodes");
+    
+    const stats = await db.select()
+      .from(userStats)
+      .orderBy(desc(userStats.gamesWon))
+      .limit(limit);
+    
+    return stats.map((stat) => ({
+      ...stat,
+      playerName: PIN_CODES[stat.userId] || null,
+    }));
   }
 }
 

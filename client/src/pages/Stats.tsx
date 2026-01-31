@@ -1,38 +1,65 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Trophy, Target, TrendingUp, Award, Percent, Zap, Medal } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, Award, Percent, Zap, Medal, LogOut, KeyRound } from "lucide-react";
 import { Link } from "wouter";
 import type { UserStats } from "@shared/schema";
-import type { User } from "@shared/models/auth";
+import { PIN_CODES, getPlayerNameFromPin, isValidPin } from "@shared/pinCodes";
 
 interface LeaderboardEntry extends UserStats {
-  user: User | null;
+  playerName: string | null;
 }
 
+const PIN_STORAGE_KEY = "catch5_pin";
+
 export default function Stats() {
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const [pin, setPin] = useState("");
+  const [enteredPin, setEnteredPin] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const savedPin = localStorage.getItem(PIN_STORAGE_KEY);
+    if (savedPin && isValidPin(savedPin)) {
+      setEnteredPin(savedPin);
+    }
+  }, []);
+
+  const playerName = enteredPin ? getPlayerNameFromPin(enteredPin) : null;
 
   const { data: stats, isLoading: statsLoading } = useQuery<UserStats | null>({
-    queryKey: ["/api/stats"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/stats/pin", enteredPin],
+    enabled: !!enteredPin,
   });
 
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard"],
+    queryKey: ["/api/leaderboard/pin"],
   });
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
-  }
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length !== 4) {
+      setError("Please enter a 4-digit code");
+      return;
+    }
+    if (!isValidPin(pin)) {
+      setError("Invalid code");
+      return;
+    }
+    setEnteredPin(pin);
+    localStorage.setItem(PIN_STORAGE_KEY, pin);
+    setError("");
+    setPin("");
+  };
+
+  const handleLogout = () => {
+    setEnteredPin(null);
+    localStorage.removeItem(PIN_STORAGE_KEY);
+  };
 
   const winRate = stats && stats.gamesPlayed > 0 
     ? ((stats.gamesWon / stats.gamesPlayed) * 100).toFixed(1)
@@ -54,21 +81,26 @@ export default function Stats() {
           <h1 className="text-2xl font-bold" data-testid="text-stats-title">Player Statistics</h1>
         </div>
 
-        {isAuthenticated && user && (
+        {enteredPin && playerName && (
           <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={user.profileImageUrl || undefined} />
-                <AvatarFallback className="text-xl">
-                  {user.firstName?.[0] || user.email?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle className="text-xl" data-testid="text-user-name">
-                  {user.firstName} {user.lastName}
-                </CardTitle>
-                <p className="text-muted-foreground text-sm" data-testid="text-user-email">{user.email}</p>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                    {playerName[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-xl capitalize" data-testid="text-user-name">
+                    {playerName}
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm" data-testid="text-user-code">Code: {enteredPin}</p>
+                </div>
               </div>
+              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout-pin">
+                <LogOut className="w-4 h-4 mr-2" />
+                Switch Player
+              </Button>
             </CardHeader>
             <CardContent>
               {statsLoading ? (
@@ -127,15 +159,37 @@ export default function Stats() {
           </Card>
         )}
 
-        {!isAuthenticated && (
+        {!enteredPin && (
           <Card className="mb-6">
-            <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground mb-4" data-testid="text-login-prompt">
-                Log in to track your personal statistics
-              </p>
-              <Button asChild data-testid="button-login-stats">
-                <a href="/api/login">Log In</a>
-              </Button>
+            <CardContent className="py-8">
+              <div className="flex flex-col items-center gap-4">
+                <KeyRound className="w-12 h-12 text-muted-foreground" />
+                <p className="text-muted-foreground text-center" data-testid="text-pin-prompt">
+                  Enter your 4-digit code to view your stats
+                </p>
+                <form onSubmit={handlePinSubmit} className="flex gap-2">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    placeholder="0000"
+                    value={pin}
+                    onChange={(e) => {
+                      setPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+                      setError("");
+                    }}
+                    className="w-24 text-center text-lg tracking-widest"
+                    data-testid="input-pin"
+                  />
+                  <Button type="submit" data-testid="button-submit-pin">
+                    View Stats
+                  </Button>
+                </form>
+                {error && (
+                  <p className="text-destructive text-sm" data-testid="text-pin-error">{error}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -174,14 +228,13 @@ export default function Stats() {
                       )}
                     </div>
                     <Avatar className="w-10 h-10">
-                      <AvatarImage src={entry.user?.profileImageUrl || undefined} />
-                      <AvatarFallback>
-                        {entry.user?.firstName?.[0] || "?"}
+                      <AvatarFallback className="bg-primary/20">
+                        {entry.playerName?.[0]?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <p className="font-medium" data-testid={`leaderboard-name-${index}`}>
-                        {entry.user?.firstName || "Unknown"} {entry.user?.lastName || ""}
+                      <p className="font-medium capitalize" data-testid={`leaderboard-name-${index}`}>
+                        {entry.playerName || "Unknown"}
                       </p>
                       <p className="text-sm text-muted-foreground" data-testid={`leaderboard-games-${index}`}>
                         {entry.gamesPlayed} games played
