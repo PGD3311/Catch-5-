@@ -37,8 +37,7 @@ export interface IStorage {
     bidsSucceeded?: number;
     timesSet?: number;
     totalPointsScored?: number;
-    highestBid?: number;
-    highestBidMade?: number;
+    totalBidAmount?: number;
   }): Promise<UserStats>;
   getLeaderboard(limit: number): Promise<Array<UserStats & { user: User | null }>>;
   getPinLeaderboard(limit: number): Promise<Array<UserStats & { playerName: string | null }>>;
@@ -123,8 +122,7 @@ export class DatabaseStorage implements IStorage {
     bidsSucceeded?: number;
     timesSet?: number;
     totalPointsScored?: number;
-    highestBid?: number;
-    highestBidMade?: number;
+    totalBidAmount?: number;
   }): Promise<UserStats> {
     const existing = await this.getUserStats(userId);
     
@@ -139,8 +137,7 @@ export class DatabaseStorage implements IStorage {
           bidsSucceeded: increments.bidsSucceeded || 0,
           timesSet: increments.timesSet || 0,
           totalPointsScored: increments.totalPointsScored || 0,
-          highestBid: increments.highestBid || 0,
-          highestBidMade: increments.highestBidMade || 0,
+          totalBidAmount: increments.totalBidAmount || 0,
         })
         .returning();
       return result[0];
@@ -155,8 +152,7 @@ export class DatabaseStorage implements IStorage {
     if (increments.bidsSucceeded) updates.bidsSucceeded = existing.bidsSucceeded + increments.bidsSucceeded;
     if (increments.timesSet) updates.timesSet = existing.timesSet + increments.timesSet;
     if (increments.totalPointsScored) updates.totalPointsScored = existing.totalPointsScored + increments.totalPointsScored;
-    if (increments.highestBid && increments.highestBid > existing.highestBid) updates.highestBid = increments.highestBid;
-    if (increments.highestBidMade && increments.highestBidMade > existing.highestBidMade) updates.highestBidMade = increments.highestBidMade;
+    if (increments.totalBidAmount) updates.totalBidAmount = existing.totalBidAmount + increments.totalBidAmount;
     
     const result = await db.update(userStats)
       .set(updates)

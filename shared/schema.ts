@@ -16,8 +16,7 @@ export const userStats = pgTable("user_stats", {
   bidsSucceeded: integer("bids_succeeded").default(0).notNull(),
   timesSet: integer("times_set").default(0).notNull(),
   totalPointsScored: integer("total_points_scored").default(0).notNull(),
-  highestBid: integer("highest_bid").default(0).notNull(),
-  highestBidMade: integer("highest_bid_made").default(0).notNull(),
+  totalBidAmount: integer("total_bid_amount").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

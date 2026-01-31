@@ -69,6 +69,10 @@ export default function Stats() {
     ? ((stats.bidsSucceeded / stats.bidsMade) * 100).toFixed(1)
     : "0.0";
 
+  const averageBid = stats && stats.bidsMade > 0
+    ? (stats.totalBidAmount / stats.bidsMade).toFixed(1)
+    : "0.0";
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto p-4 sm:p-6">
@@ -139,9 +143,9 @@ export default function Stats() {
                   />
                   <StatCard
                     icon={<Award className="w-5 h-5 text-amber-600" />}
-                    label="Highest Bid Made"
-                    value={stats.highestBidMade}
-                    testId="stat-highest-bid"
+                    label="Average Bid"
+                    value={averageBid}
+                    testId="stat-average-bid"
                   />
                   <StatCard
                     icon={<Zap className="w-5 h-5 text-red-500" />}
