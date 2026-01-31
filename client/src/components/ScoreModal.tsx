@@ -153,19 +153,23 @@ export function ScoreModal({
                     animate={{ rotate: [0, -10, 10, 0] }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    <Trophy className="w-8 h-8 text-amber-500 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                    <Trophy className={cn(
+                      "w-8 h-8 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]",
+                      isYourTeamWinning ? "text-amber-500" : "text-muted-foreground"
+                    )} />
                   </motion.div>
-                  <span className={isYourTeamWinning ? 'text-amber-400' : ''}>
-                    {isYourTeamWinning ? 'Victory!' : 'Game Over'}
+                  <span className={isYourTeamWinning ? 'text-amber-400' : 'text-muted-foreground'}>
+                    {isYourTeamWinning ? 'Victory!' : 'Defeat'}
                   </span>
-                  {isYourTeamWinning && (
-                    <motion.div
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 0.5, delay: 0.3 }}
-                    >
-                      <Sparkles className="w-6 h-6 text-amber-400" />
-                    </motion.div>
-                  )}
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <Sparkles className={cn(
+                      "w-6 h-6",
+                      isYourTeamWinning ? "text-amber-400" : "text-muted-foreground"
+                    )} />
+                  </motion.div>
                 </>
               ) : (
                 'Round Complete'
