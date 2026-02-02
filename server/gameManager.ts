@@ -150,6 +150,7 @@ const playerConnections = new Map<WebSocket, ConnectedPlayer>();
 const turnTimers = new Map<string, NodeJS.Timeout>();
 const turnTimerPlayerIndex = new Map<string, number>(); // Track which player the timer is for
 
+const lobbyDisconnectTimers = new Map<string, NodeJS.Timeout>(); // token -> timer
 const TURN_TIMEOUT_MS = 20000; // 20 seconds per turn
 
 function generateRoomCode(): string {
@@ -452,7 +453,14 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
     const existingPlayer = room.players.get(existingToken)!;
     existingPlayer.ws = ws;
     playerConnections.set(ws, existingPlayer);
-    
+
+    // Cancel lobby disconnect grace period if active
+    const lobbyTimer = lobbyDisconnectTimers.get(existingToken);
+    if (lobbyTimer) {
+      clearTimeout(lobbyTimer);
+      lobbyDisconnectTimers.delete(existingToken);
+    }
+
     log(`Player ${existingPlayer.playerName} rejoined room ${room.code} at seat ${existingPlayer.seatIndex}`, 'ws');
     
     // If game is in progress, use broadcastGameState to ensure timers are properly managed
@@ -470,17 +478,19 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
       chatMessages: room.chatMessages,
     }));
     
-    broadcastToRoom(room, { type: 'player_reconnected', seatIndex: existingPlayer.seatIndex }, ws);
+    broadcastToRoom(room, { type: 'player_reconnected', seatIndex: existingPlayer.seatIndex, players: getPlayerList(room) }, ws);
     return;
   }
   
-  // If player has a stale token that doesn't exist in this room, clear their session and ask them to rejoin fresh
+  // If player has a stale token that doesn't exist in this room, clear their session and auto-rejoin
   if (existingToken && !room.players.has(existingToken)) {
     log(`Stale token detected for room ${room.code}, asking player to rejoin fresh`, 'ws');
-    ws.send(JSON.stringify({ 
-      type: 'error', 
-      message: 'Your session expired. Please rejoin the room.',
-      clearSession: true 
+    ws.send(JSON.stringify({
+      type: 'error',
+      message: 'Your session expired. Rejoining...',
+      clearSession: true,
+      roomCode: room.code,
+      autoRejoin: true,
     }));
     return;
   }
@@ -742,7 +752,14 @@ async function handlePlayerAction(ws: WebSocket, message: any) {
 
   const previousPhase = room.gameState?.phase || 'setup';
   room.gameState = newState;
-  
+
+  // Persist game state to DB on phase transitions (not every action, to avoid DB spam)
+  if (previousPhase !== newState.phase) {
+    storage.updateRoom(room.id, { gameState: newState }).catch(err =>
+      log(`Failed to persist game state: ${err}`, 'ws')
+    );
+  }
+
   // Validate no duplicate cards after every action
   gameEngine.validateNoDuplicates(newState, `after action: ${action}`);
   
@@ -837,8 +854,48 @@ async function processCpuTurns(room: GameRoom) {
 async function handleLeaveRoom(ws: WebSocket) {
   const player = playerConnections.get(ws);
   if (!player) return;
-  
-  handlePlayerDisconnect(player);
+
+  const room = Array.from(rooms.values()).find(r => r.id === player.roomId);
+
+  if (room) {
+    if (room.gameState) {
+      // Game in progress: replace human with CPU so game continues
+      player.ws = null as any;
+      const cpuNames = ['CPU Alpha', 'CPU Beta', 'CPU Gamma', 'CPU Delta'];
+      room.cpuPlayers.push({
+        seatIndex: player.seatIndex,
+        playerName: cpuNames[player.seatIndex] || `CPU ${player.seatIndex + 1}`,
+      });
+      // Update game state to mark this player as CPU
+      if (room.gameState) {
+        room.gameState = {
+          ...room.gameState,
+          players: room.gameState.players.map((p, idx) =>
+            idx === player.seatIndex ? { ...p, isHuman: false, name: cpuNames[player.seatIndex] || `CPU ${player.seatIndex + 1}` } : p
+          ),
+        };
+      }
+      room.players.delete(player.playerToken);
+      broadcastToRoom(room, {
+        type: 'player_disconnected',
+        seatIndex: player.seatIndex,
+        players: getPlayerList(room),
+      });
+      // Broadcast updated game state so clients see CPU
+      broadcastGameState(room);
+      log(`Player ${player.playerName} left active game in room ${room.code}, replaced with CPU`, 'ws');
+    } else {
+      // Lobby: fully remove the player, freeing the seat
+      room.players.delete(player.playerToken);
+      broadcastToRoom(room, {
+        type: 'player_disconnected',
+        seatIndex: player.seatIndex,
+        players: getPlayerList(room),
+      });
+      log(`Player ${player.playerName} left lobby in room ${room.code}, seat freed`, 'ws');
+    }
+  }
+
   playerConnections.delete(ws);
   ws.send(JSON.stringify({ type: 'left' }));
 }
@@ -1133,13 +1190,34 @@ function handlePlayerDisconnect(player: ConnectedPlayer) {
   // Always mark player as disconnected but keep their seat assignment and token
   // This allows them to rejoin with the same token whether in lobby or game
   player.ws = null as any; // Mark as disconnected but keep seat
-  
+
   if (room.gameState) {
     log(`Player ${player.playerName} disconnected from active game in room ${room.code}`, 'ws');
   } else {
     log(`Player ${player.playerName} disconnected from lobby in room ${room.code}`, 'ws');
+
+    // In lobby: start a 30-second grace period — if they don't reconnect, free their seat
+    const token = player.playerToken;
+    const existingLobbyTimer = lobbyDisconnectTimers.get(token);
+    if (existingLobbyTimer) {
+      clearTimeout(existingLobbyTimer);
+    }
+    const lobbyTimer = setTimeout(() => {
+      lobbyDisconnectTimers.delete(token);
+      // Check if player is still disconnected and room still has no game
+      if (player.ws === null && room.players.has(token) && !room.gameState) {
+        room.players.delete(token);
+        broadcastToRoom(room, {
+          type: 'player_disconnected',
+          seatIndex: player.seatIndex,
+          players: getPlayerList(room),
+        });
+        log(`Lobby grace period expired for ${player.playerName} in room ${room.code}, seat freed`, 'ws');
+      }
+    }, 30_000);
+    lobbyDisconnectTimers.set(token, lobbyTimer);
   }
-  
+
   broadcastToRoom(room, {
     type: 'player_disconnected',
     seatIndex: player.seatIndex,

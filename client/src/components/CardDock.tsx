@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Card as CardType, Suit } from '@shared/gameTypes';
 import { PlayingCard } from './PlayingCard';
 import { cn } from '@/lib/utils';
+import { getSuitColor, SuitIcon } from '@/components/ui/suit-utils';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 interface CardDockProps {
@@ -204,7 +205,7 @@ function DockCard({ card, index, mouseX, containerRef, onClick, disabled, trumpS
 
 function CardContent({ card }: { card: CardType }) {
   const suitColor = getSuitColor(card.suit);
-  
+
   return (
     <div className="absolute inset-0 flex flex-col">
       {/* Card face gradient for depth */}
@@ -219,7 +220,7 @@ function CardContent({ card }: { card: CardType }) {
 
       {/* Center: large suit icon */}
       <div className={cn('absolute inset-0 flex items-center justify-center', suitColor)}>
-        <SuitIcon suit={card.suit} />
+        <SuitIcon suit={card.suit} className="w-[50%] h-[50%] max-w-10 max-h-10 drop-shadow-md" />
       </div>
 
       {/* Bottom-right: rank only (rotated) */}
@@ -228,36 +229,5 @@ function CardContent({ card }: { card: CardType }) {
       </div>
     </div>
   );
-}
-
-import { Heart, Diamond, Club, Spade } from 'lucide-react';
-
-function SuitIcon({ suit }: { suit: CardType['suit'] }) {
-  // Large centered icon - 50% of card size
-  const iconClass = 'w-[50%] h-[50%] max-w-10 max-h-10 drop-shadow-md';
-  
-  switch (suit) {
-    case 'Hearts':
-      return <Heart className={iconClass} fill="currentColor" />;
-    case 'Diamonds':
-      return <Diamond className={iconClass} fill="currentColor" />;
-    case 'Clubs':
-      return <Club className={iconClass} fill="currentColor" />;
-    case 'Spades':
-      return <Spade className={iconClass} fill="currentColor" />;
-  }
-}
-
-function getSuitColor(suit: CardType['suit']): string {
-  switch (suit) {
-    case 'Hearts':
-      return 'text-red-500 dark:text-red-400';
-    case 'Diamonds':
-      return 'text-blue-500 dark:text-blue-400';
-    case 'Clubs':
-      return 'text-emerald-600 dark:text-emerald-400';
-    case 'Spades':
-      return 'text-slate-800 dark:text-slate-100';
-  }
 }
 

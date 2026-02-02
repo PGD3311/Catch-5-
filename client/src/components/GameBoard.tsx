@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
+import { useCpuTurns } from '@/hooks/useCpuTurns';
 import { useToast } from '@/hooks/use-toast';
 import { useSound } from '@/hooks/useSoundEffects';
 import { History } from 'lucide-react';
@@ -28,22 +29,14 @@ import {
   initializeGame,
   dealCards,
   processBid,
-  selectTrump,
   playCard,
   canPlayCard,
-  getCpuBid,
-  getCpuTrumpChoice,
-  getCpuCardToPlay,
-  getCpuTrumpToDiscard,
   startNewRound,
   checkGameOver,
   performPurgeAndDraw,
   discardTrumpCard,
   startDealerDraw,
   finalizeDealerDraw,
-  determineTrickWinner,
-  checkAutoClaim,
-  applyAutoClaim,
 } from '@shared/gameEngine';
 
 export function GameBoard() {
@@ -374,104 +367,16 @@ export function GameBoard() {
     prevTrickRef.current = currentTrick;
   }, [isMultiplayerMode, gameState.currentTrick, gameState.lastTrick, gameState.phase, displayTrick.length]);
 
-  useEffect(() => {
-    if (isMultiplayerMode) return;
-    if (gameState.phase === 'bidding') {
-      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-      if (!currentPlayer.isHuman) {
-        // Slower bidding timing (1.0-1.5 seconds)
-        const baseDelay = 1000 + Math.random() * 500;
-        const timer = setTimeout(() => {
-          const passedCount = gameState.players.filter(p => p.bid === 0).length;
-          const isDealer = gameState.currentPlayerIndex === gameState.dealerIndex;
-          const isLastAndAllPassed = isDealer && passedCount === 3;
-          const cpuBid = getCpuBid(currentPlayer.hand, gameState.highBid, isDealer, isLastAndAllPassed);
-          setGameState(prev => processBid(prev, cpuBid));
-        }, baseDelay);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.highBid, gameState.dealerIndex, isMultiplayerMode]);
-
-  useEffect(() => {
-    if (isMultiplayerMode) return;
-    if (gameState.phase === 'trump-selection') {
-      const bidder = gameState.players.find(p => p.id === gameState.bidderId);
-      if (bidder && !bidder.isHuman) {
-        // Slower trump selection timing (1.0-1.4 seconds)
-        const timer = setTimeout(() => {
-          // Check if dealer was forced to bid (all others passed, bid is minimum)
-          const wasForcedBid = gameState.highBid === 5 && 
-            gameState.players.filter(p => p.bid === 0).length === 3;
-          const bestSuit = getCpuTrumpChoice(bidder.hand, wasForcedBid);
-          handleTrumpSelect(bestSuit);
-        }, 1000 + Math.random() * 400);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [gameState.phase, gameState.players, gameState.bidderId, gameState.highBid, isMultiplayerMode, handleTrumpSelect]);
-
-  useEffect(() => {
-    if (isMultiplayerMode) return;
-    if (gameState.phase !== 'discard-trump') return;
-    
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    if (!currentPlayer.isHuman) {
-      const timer = setTimeout(() => {
-        const cardToDiscard = getCpuTrumpToDiscard(currentPlayer.hand, gameState.trumpSuit!);
-        setGameState(prev => discardTrumpCard(prev, cardToDiscard));
-      }, 1000 + Math.random() * 400);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.trumpSuit, isMultiplayerMode]);
-
-  useEffect(() => {
-    if (isMultiplayerMode) return;
-    if (gameState.phase !== 'playing') return;
-    // Don't process CPU turns while displaying a completed trick
-    if (displayTrick.length > 0) return;
-    
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    if (!currentPlayer.isHuman && currentPlayer.hand.length > 0) {
-      // Slower, more deliberate timing for CPU plays (1.2-1.8 seconds)
-      const baseDelay = 1200 + Math.random() * 600;
-      const timer = setTimeout(() => {
-        // Double-check we're still in playing phase and it's still this CPU's turn
-        setGameState(prev => {
-          if (prev.phase !== 'playing') return prev;
-          if (prev.players[prev.currentPlayerIndex].isHuman) return prev;
-          if (prev.players[prev.currentPlayerIndex].id !== currentPlayer.id) return prev;
-          
-          const cardToPlay = getCpuCardToPlay(
-            prev.players[prev.currentPlayerIndex].hand,
-            prev.currentTrick,
-            prev.trumpSuit,
-            currentPlayer.id,
-            prev.players,
-            prev.bidderId
-          );
-          
-          const newTrick = [...prev.currentTrick, { playerId: currentPlayer.id, card: cardToPlay }];
-          
-          if (newTrick.length === 4 && prev.trumpSuit) {
-            setDisplayTrick(newTrick);
-            
-            if (trickWinnerTimeoutRef.current) {
-              clearTimeout(trickWinnerTimeoutRef.current);
-            }
-            trickWinnerTimeoutRef.current = setTimeout(() => {
-              setDisplayTrick([]);
-              setGameState(prevInner => playCard(prevInner, cardToPlay));
-            }, 2500);
-            return prev; // Don't update state yet - wait for displayTrick timeout
-          } else {
-            return playCard(prev, cardToPlay);
-          }
-        });
-      }, baseDelay);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.phase, gameState.currentPlayerIndex, gameState.players, gameState.currentTrick, gameState.trumpSuit, isMultiplayerMode, displayTrick.length]);
+  // CPU turn scheduling (bidding, trump selection, discard, card play)
+  useCpuTurns({
+    gameState,
+    setGameState,
+    isMultiplayerMode,
+    displayTrick,
+    setDisplayTrick,
+    trickWinnerTimeoutRef,
+    handleTrumpSelect,
+  });
 
   // Auto-claim disabled for now
   // useEffect(() => {

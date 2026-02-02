@@ -1,6 +1,6 @@
 import { Card, DeckColor, DECK_COLORS, Suit } from '@shared/gameTypes';
 import { cn } from '@/lib/utils';
-import { Heart, Diamond, Club, Spade } from 'lucide-react';
+import { getSuitColor, SuitIcon } from '@/components/ui/suit-utils';
 
 interface PlayingCardProps {
   card?: Card;
@@ -13,33 +13,6 @@ interface PlayingCardProps {
   className?: string;
   trumpSuit?: Suit | null;
 }
-
-const SuitIcon = ({ suit, className }: { suit: Card['suit']; className?: string }) => {
-  const iconClass = cn('drop-shadow-sm', className);
-  switch (suit) {
-    case 'Hearts':
-      return <Heart className={iconClass} fill="currentColor" />;
-    case 'Diamonds':
-      return <Diamond className={iconClass} fill="currentColor" />;
-    case 'Clubs':
-      return <Club className={iconClass} fill="currentColor" />;
-    case 'Spades':
-      return <Spade className={iconClass} fill="currentColor" />;
-  }
-};
-
-const getSuitColor = (suit: Card['suit']): string => {
-  switch (suit) {
-    case 'Hearts':
-      return 'text-red-500 dark:text-red-400';
-    case 'Diamonds':
-      return 'text-blue-500 dark:text-blue-400';
-    case 'Clubs':
-      return 'text-emerald-600 dark:text-emerald-400';
-    case 'Spades':
-      return 'text-slate-800 dark:text-slate-100';
-  }
-};
 
 export function PlayingCard({
   card,

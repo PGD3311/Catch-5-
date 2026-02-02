@@ -742,6 +742,95 @@ export function selectTrump(state: GameState, suit: Suit): GameState {
   };
 }
 
+// Shared helper: draw cards from stock into player hands, with discard reshuffle
+function drawCardsFromStock(
+  players: Player[],
+  stock: Card[],
+  discardPile: Card[],
+  bidderIndex: number,
+  context: string,
+): { players: Player[]; stock: Card[]; discardPile: Card[]; sleptCards: Card[]; usedPurgedCards: boolean } {
+  // Deep-copy player hand arrays to avoid mutating the originals
+  const outPlayers = players.map(p => ({ ...p, hand: [...p.hand] }));
+  let outStock = stock;
+  let outDiscard = discardPile;
+
+  const drawOrder = [
+    bidderIndex,
+    (bidderIndex + 1) % 4,
+    (bidderIndex + 2) % 4,
+    (bidderIndex + 3) % 4,
+  ];
+
+  const drawnCardIds = new Set<string>();
+  for (const p of outPlayers) {
+    for (const c of p.hand) {
+      drawnCardIds.add(c.id);
+    }
+  }
+
+  let usedPurgedCards = false;
+  const originalStockIds = new Set(outStock.map(c => c.id));
+
+  for (const playerIndex of drawOrder) {
+    const player = outPlayers[playerIndex];
+    const cardsToDraw = FINAL_HAND_SIZE - player.hand.length;
+
+    for (let i = 0; i < cardsToDraw; i++) {
+      if (outStock.length === 0 && outDiscard.length > 0) {
+        console.log(`[DRAW FROM DISCARD] Stock empty, shuffling ${outDiscard.length} discarded cards back for ${player.name}`);
+        outStock = shuffleDeck(outDiscard);
+        outDiscard = [];
+        usedPurgedCards = true;
+      }
+      if (outStock.length > 0) {
+        let card = outStock.pop()!;
+        while (drawnCardIds.has(card.id) && outStock.length > 0) {
+          console.warn(`Duplicate card detected: ${card.id}, skipping`);
+          card = outStock.pop()!;
+        }
+        if (!drawnCardIds.has(card.id)) {
+          drawnCardIds.add(card.id);
+          player.hand.push(card);
+        }
+      }
+    }
+  }
+
+  const sleptCards = outStock.filter(c => originalStockIds.has(c.id));
+  return { players: outPlayers, stock: outStock, discardPile: outDiscard, sleptCards, usedPurgedCards };
+}
+
+// Shared helper: validate 52 unique cards across hands, stock, and discard
+function validateCardCounts(players: Player[], stock: Card[], discardPile: Card[], context: string): void {
+  const allCardIds = new Set<string>();
+  const duplicates: string[] = [];
+
+  for (const p of players) {
+    for (const c of p.hand) {
+      if (allCardIds.has(c.id)) duplicates.push(c.id);
+      allCardIds.add(c.id);
+    }
+  }
+  for (const c of stock) {
+    if (allCardIds.has(c.id)) duplicates.push(c.id);
+    allCardIds.add(c.id);
+  }
+  for (const c of discardPile) {
+    if (allCardIds.has(c.id)) duplicates.push(c.id);
+    allCardIds.add(c.id);
+  }
+
+  const handTotal = players.reduce((sum, p) => sum + p.hand.length, 0);
+  console.log(`[CARD VALIDATION] ${context}: ${allCardIds.size} unique cards, ${handTotal} in hands, ${stock.length} in stock, ${discardPile.length} in discard`);
+  if (duplicates.length > 0) {
+    console.error(`[CARD VALIDATION] DUPLICATES FOUND: ${duplicates.join(', ')}`);
+  }
+  if (allCardIds.size !== 52) {
+    console.error(`[CARD VALIDATION] Expected 52 cards, found ${allCardIds.size}`);
+  }
+}
+
 export function performPurgeAndDraw(state: GameState): GameState {
   const trumpSuit = state.trumpSuit!;
   let stock = [...state.stock];
@@ -756,15 +845,11 @@ export function performPurgeAndDraw(state: GameState): GameState {
 
     discardPile = [...discardPile, ...nonTrumpCards];
 
-    let keptCards: Card[];
     if (trumpCards.length > FINAL_HAND_SIZE) {
       playersNeedingDiscard.push(index);
-      keptCards = trumpCards;
-    } else {
-      keptCards = trumpCards;
     }
 
-    return { ...player, hand: keptCards };
+    return { ...player, hand: [...trumpCards] };
   });
 
   if (playersNeedingDiscard.length > 0) {
@@ -780,97 +865,16 @@ export function performPurgeAndDraw(state: GameState): GameState {
     };
   }
 
-  const drawOrder = [
-    bidderIndex,
-    (bidderIndex + 1) % 4,
-    (bidderIndex + 2) % 4,
-    (bidderIndex + 3) % 4,
-  ];
-
-  // Track all cards that have been drawn to prevent duplicates
-  const drawnCardIds = new Set<string>();
-  // Track all cards already in player hands
-  for (const p of newPlayers) {
-    for (const c of p.hand) {
-      drawnCardIds.add(c.id);
-    }
-  }
-
-  let usedPurgedCards = false;
-  
-  // Track original stock cards - only these can become slept cards
-  const originalStockIds = new Set(stock.map(c => c.id));
-
-  for (const playerIndex of drawOrder) {
-    const player = newPlayers[playerIndex];
-    const cardsToDraw = FINAL_HAND_SIZE - player.hand.length;
-
-    for (let i = 0; i < cardsToDraw; i++) {
-      if (stock.length === 0 && discardPile.length > 0) {
-        // Shuffle purged non-trump cards back into stock
-        console.log(`[DRAW FROM DISCARD] Stock empty, shuffling ${discardPile.length} discarded cards back for ${player.name}`);
-        stock = shuffleDeck(discardPile);
-        discardPile = [];
-        usedPurgedCards = true;
-      }
-      if (stock.length > 0) {
-        // Find a card that hasn't been drawn yet (safety check)
-        let card = stock.pop()!;
-        while (drawnCardIds.has(card.id) && stock.length > 0) {
-          // Skip duplicate card (shouldn't happen, but safety measure)
-          console.warn(`Duplicate card detected: ${card.id}, skipping`);
-          card = stock.pop()!;
-        }
-        if (!drawnCardIds.has(card.id)) {
-          drawnCardIds.add(card.id);
-          player.hand.push(card);
-        }
-      }
-    }
-  }
-
-  // Slept cards are ONLY cards from the ORIGINAL stock that were never drawn
-  // Cards from reshuffled discard pile are NOT slept cards
-  const sleptCards = stock.filter(c => originalStockIds.has(c.id));
-
-  // VALIDATION: Check for exactly 52 unique cards
-  const allCardIds = new Set<string>();
-  const duplicates: string[] = [];
-  
-  // Count all cards in hands
-  for (const p of newPlayers) {
-    for (const c of p.hand) {
-      if (allCardIds.has(c.id)) duplicates.push(c.id);
-      allCardIds.add(c.id);
-    }
-  }
-  // Count stock
-  for (const c of stock) {
-    if (allCardIds.has(c.id)) duplicates.push(c.id);
-    allCardIds.add(c.id);
-  }
-  // Count discardPile
-  for (const c of discardPile) {
-    if (allCardIds.has(c.id)) duplicates.push(c.id);
-    allCardIds.add(c.id);
-  }
-  
-  const handTotal = newPlayers.reduce((sum, p) => sum + p.hand.length, 0);
-  console.log(`[CARD VALIDATION] After purge/draw: ${allCardIds.size} unique cards, ${handTotal} in hands, ${stock.length} in stock, ${discardPile.length} in discard`);
-  if (duplicates.length > 0) {
-    console.error(`[CARD VALIDATION] DUPLICATES FOUND: ${duplicates.join(', ')}`);
-  }
-  if (allCardIds.size !== 52) {
-    console.error(`[CARD VALIDATION] Expected 52 cards, found ${allCardIds.size}`);
-  }
+  const drawResult = drawCardsFromStock(newPlayers, stock, discardPile, bidderIndex, 'purge-draw');
+  validateCardCounts(drawResult.players, drawResult.stock, drawResult.discardPile, 'After purge/draw');
 
   return {
     ...state,
-    players: newPlayers,
-    stock,
-    discardPile,
-    sleptCards,
-    usedPurgedCards, // Flag to notify players
+    players: drawResult.players,
+    stock: drawResult.stock,
+    discardPile: drawResult.discardPile,
+    sleptCards: drawResult.sleptCards,
+    usedPurgedCards: drawResult.usedPurgedCards,
     phase: 'playing',
     currentPlayerIndex: bidderIndex,
     leadPlayerIndex: bidderIndex,
@@ -880,29 +884,29 @@ export function performPurgeAndDraw(state: GameState): GameState {
 export function discardTrumpCard(state: GameState, card: Card): GameState {
   const playerIndex = state.currentPlayerIndex;
   const player = state.players[playerIndex];
-  
+
   const cardInHand = player.hand.find(c => c.id === card.id);
   if (!cardInHand) {
     return state;
   }
-  
+
   if (cardInHand.suit !== state.trumpSuit) {
     return state;
   }
-  
+
   const newHand = player.hand.filter(c => c.id !== card.id);
   const newPlayers = [...state.players];
   newPlayers[playerIndex] = { ...player, hand: newHand };
-  
+
   const newDiscardPile = [...state.discardPile, card];
-  
+
   const remainingPlayersNeedingDiscard = (state.playersNeedingDiscard || []).filter(idx => {
     if (idx === playerIndex) {
       return newHand.length > FINAL_HAND_SIZE;
     }
     return newPlayers[idx].hand.length > FINAL_HAND_SIZE;
   });
-  
+
   if (remainingPlayersNeedingDiscard.length > 0) {
     const nextPlayerToDiscard = remainingPlayersNeedingDiscard[0];
     return {
@@ -913,95 +917,20 @@ export function discardTrumpCard(state: GameState, card: Card): GameState {
       currentPlayerIndex: nextPlayerToDiscard,
     };
   }
-  
+
   const bidderIndex = state.players.findIndex(p => p.id === state.bidderId);
-  let stock = [...state.stock];
-  let discardPile = newDiscardPile;
-  
-  // Create deep copies of all players to avoid mutating original state
-  const playersForDraw = newPlayers.map(p => ({ ...p, hand: [...p.hand] }));
-  
-  const drawOrder = [
-    bidderIndex,
-    (bidderIndex + 1) % 4,
-    (bidderIndex + 2) % 4,
-    (bidderIndex + 3) % 4,
-  ];
+  const stock = [...state.stock];
 
-  // Track all cards that have been drawn to prevent duplicates
-  const drawnCardIds = new Set<string>();
-  for (const p of playersForDraw) {
-    for (const c of p.hand) {
-      drawnCardIds.add(c.id);
-    }
-  }
-
-  let usedPurgedCards = false;
-  
-  // Track original stock cards - only these can become slept cards
-  const originalStockIds = new Set(stock.map(c => c.id));
-
-  for (const pIndex of drawOrder) {
-    const p = playersForDraw[pIndex];
-    const cardsToDraw = FINAL_HAND_SIZE - p.hand.length;
-
-    for (let i = 0; i < cardsToDraw; i++) {
-      if (stock.length === 0 && discardPile.length > 0) {
-        console.log(`[DRAW FROM DISCARD] Stock empty, shuffling ${discardPile.length} discarded cards back for ${p.name}`);
-        stock = shuffleDeck(discardPile);
-        discardPile = [];
-        usedPurgedCards = true;
-      }
-      if (stock.length > 0) {
-        let card = stock.pop()!;
-        while (drawnCardIds.has(card.id) && stock.length > 0) {
-          console.warn(`Duplicate card detected: ${card.id}, skipping`);
-          card = stock.pop()!;
-        }
-        if (!drawnCardIds.has(card.id)) {
-          drawnCardIds.add(card.id);
-          p.hand.push(card);
-        }
-      }
-    }
-  }
-
-  // Slept cards are ONLY cards from the ORIGINAL stock that were never drawn
-  // Cards from reshuffled discard pile are NOT slept cards
-  const sleptCards = stock.filter(c => originalStockIds.has(c.id));
-
-  // VALIDATION: Check for exactly 52 unique cards after discard-trump draw
-  const allCardIds = new Set<string>();
-  const duplicates: string[] = [];
-  
-  for (const p of playersForDraw) {
-    for (const c of p.hand) {
-      if (allCardIds.has(c.id)) duplicates.push(c.id);
-      allCardIds.add(c.id);
-    }
-  }
-  for (const c of stock) {
-    if (allCardIds.has(c.id)) duplicates.push(c.id);
-    allCardIds.add(c.id);
-  }
-  for (const c of discardPile) {
-    if (allCardIds.has(c.id)) duplicates.push(c.id);
-    allCardIds.add(c.id);
-  }
-  
-  const handTotal = playersForDraw.reduce((sum, p) => sum + p.hand.length, 0);
-  console.log(`[CARD VALIDATION] After discard-trump draw: ${allCardIds.size} unique cards, ${handTotal} in hands, ${stock.length} in stock, ${discardPile.length} in discard`);
-  if (duplicates.length > 0) {
-    console.error(`[CARD VALIDATION] DUPLICATES FOUND: ${duplicates.join(', ')}`);
-  }
+  const drawResult = drawCardsFromStock(newPlayers, stock, newDiscardPile, bidderIndex, 'discard-trump');
+  validateCardCounts(drawResult.players, drawResult.stock, drawResult.discardPile, 'After discard-trump draw');
 
   return {
     ...state,
-    players: playersForDraw,
-    stock,
-    discardPile,
-    sleptCards,
-    usedPurgedCards,
+    players: drawResult.players,
+    stock: drawResult.stock,
+    discardPile: drawResult.discardPile,
+    sleptCards: drawResult.sleptCards,
+    usedPurgedCards: drawResult.usedPurgedCards,
     playersNeedingDiscard: [],
     phase: 'playing',
     currentPlayerIndex: bidderIndex,

@@ -256,9 +256,21 @@ export function useMultiplayer() {
         console.log('[WS] Error received:', message.message);
         // If the error indicates session is invalid, clear stored session data
         if (message.clearSession) {
+          const savedName = sessionStorage.getItem('playerName') || 'Player';
           sessionStorage.removeItem('playerToken');
           sessionStorage.removeItem('roomCode');
           sessionStorage.removeItem('playerName');
+
+          // Auto-rejoin if server provides the room code and flag
+          if (message.autoRejoin && message.roomCode && wsRef.current?.readyState === WebSocket.OPEN) {
+            console.log('[WS] Auto-rejoining room:', message.roomCode);
+            wsRef.current.send(JSON.stringify({
+              type: 'join_room',
+              roomCode: message.roomCode,
+              playerName: savedName,
+            }));
+            break;
+          }
         }
         // Check if this is a room unavailable error
         if (message.message?.includes('Room not found') || message.message?.includes('no longer exists')) {
