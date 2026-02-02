@@ -311,10 +311,14 @@ export function GameBoard() {
   // Multiplayer: Capture completed tricks to display before transitioning
   useEffect(() => {
     if (!isMultiplayerMode) return;
-    if (displayTrick.length > 0) return; // Already displaying a trick
-    
+
     const prevTrick = prevTrickRef.current;
     const currentTrick = gameState.currentTrick;
+
+    // Always update ref so trick tracking stays current even during animation display
+    prevTrickRef.current = currentTrick;
+
+    if (displayTrick.length > 0) return; // Already displaying a trick
     
     // Generate a unique ID for the current lastTrick
     const lastTrickId = gameState.lastTrick && gameState.lastTrick.length === 4
@@ -362,9 +366,6 @@ export function GameBoard() {
         setDisplayTrick([]);
       }, 2500);
     }
-    
-    // Update ref for next comparison
-    prevTrickRef.current = currentTrick;
   }, [isMultiplayerMode, gameState.currentTrick, gameState.lastTrick, gameState.phase, displayTrick.length]);
 
   // CPU turn scheduling (bidding, trump selection, discard, card play)

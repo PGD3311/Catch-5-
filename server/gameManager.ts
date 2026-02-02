@@ -152,7 +152,8 @@ const turnTimers = new Map<string, NodeJS.Timeout>();
 const turnTimerPlayerIndex = new Map<string, number>(); // Track which player the timer is for
 
 const lobbyDisconnectTimers = new Map<string, NodeJS.Timeout>(); // token -> timer
-const TURN_TIMEOUT_MS = 20000; // 20 seconds per turn
+const TURN_TIMEOUT_MS = 20000; // 20 seconds per turn (client display)
+const TURN_TIMEOUT_BUFFER_MS = 1500; // Extra buffer so server auto-play fires after client timer hits 0
 
 function safeSend(ws: WebSocket | null, data: string): void {
   try {
@@ -1422,7 +1423,7 @@ function startTurnTimer(room: GameRoom, preserveExistingTime = false) {
     
     // If already expired, trigger timeout immediately
     if (remainingMs <= 0) {
-      handleTurnTimeout(room);
+      handleTurnTimeout(room, state.currentPlayerIndex);
       return;
     }
   } else {
@@ -1437,25 +1438,32 @@ function startTurnTimer(room: GameRoom, preserveExistingTime = false) {
   }
   
   // Track which player this timer is for
-  turnTimerPlayerIndex.set(room.id, state.currentPlayerIndex);
-  
+  const expectedPlayerIndex = state.currentPlayerIndex;
+  turnTimerPlayerIndex.set(room.id, expectedPlayerIndex);
+
   // Create timeout that will auto-move when time expires
+  // Add buffer so server fires AFTER client timer shows 0, preventing race conditions
+  // where a last-second player action arrives in the same event loop tick as the timeout
   const timer = setTimeout(() => {
-    handleTurnTimeout(room);
-  }, remainingMs);
-  
+    handleTurnTimeout(room, expectedPlayerIndex);
+  }, remainingMs + TURN_TIMEOUT_BUFFER_MS);
+
   turnTimers.set(room.id, timer);
 }
 
-async function handleTurnTimeout(room: GameRoom) {
+async function handleTurnTimeout(room: GameRoom, expectedPlayerIndex: number) {
   // Clear and delete the timer entry first
   clearTurnTimer(room.id);
-  
+
   if (!room.gameState) return;
-  
+
   const state = room.gameState;
+
+  // Verify the turn hasn't already moved (player acted just before timeout)
+  if (state.currentPlayerIndex !== expectedPlayerIndex) return;
+
   const currentPlayer = state.players[state.currentPlayerIndex];
-  
+
   // Double-check it's still a human's turn
   if (!currentPlayer.isHuman) return;
   if (state.phase !== 'bidding' && state.phase !== 'playing') return;
