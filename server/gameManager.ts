@@ -82,16 +82,11 @@ async function trackPlayerStats(room: GameRoom, previousPhase: string) {
         
         if (isBidder) {
           increments.bidsMade = 1;
+          increments.totalBidAmount = state.highBid;
           if (bidMade) {
             increments.bidsSucceeded = 1;
-            if (state.highBid > 0) {
-              increments.highestBidMade = state.highBid;
-            }
           } else {
             increments.timesSet = 1;
-          }
-          if (state.highBid > 0) {
-            increments.highestBid = state.highBid;
           }
         }
         
@@ -468,6 +463,10 @@ async function handleJoinRoom(ws: WebSocket, message: any) {
   if (existingToken && room.players.has(existingToken)) {
     const existingPlayer = room.players.get(existingToken)!;
     existingPlayer.ws = ws;
+    // Restore userId (PIN) if provided on reconnect — it may have been lost after server restart
+    if (userId && !existingPlayer.userId) {
+      existingPlayer.userId = userId;
+    }
     playerConnections.set(ws, existingPlayer);
 
     // Cancel lobby disconnect grace period if active

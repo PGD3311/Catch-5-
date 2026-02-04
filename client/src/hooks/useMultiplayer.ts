@@ -71,6 +71,7 @@ export function useMultiplayer() {
       const savedToken = sessionStorage.getItem('playerToken');
       const savedRoom = sessionStorage.getItem('roomCode');
       const savedName = sessionStorage.getItem('playerName');
+      const savedPin = localStorage.getItem('catch5_pin');
       if (savedToken && savedRoom) {
         console.log('[WS] Attempting to rejoin room:', savedRoom);
         ws.send(JSON.stringify({
@@ -78,6 +79,7 @@ export function useMultiplayer() {
           roomCode: savedRoom,
           playerToken: savedToken,
           playerName: savedName || '',
+          userId: savedPin || undefined,
         }));
       }
       
@@ -264,10 +266,12 @@ export function useMultiplayer() {
           // Auto-rejoin if server provides the room code and flag
           if (message.autoRejoin && message.roomCode && wsRef.current?.readyState === WebSocket.OPEN) {
             console.log('[WS] Auto-rejoining room:', message.roomCode);
+            const autoRejoinPin = localStorage.getItem('catch5_pin');
             wsRef.current.send(JSON.stringify({
               type: 'join_room',
               roomCode: message.roomCode,
               playerName: savedName,
+              userId: autoRejoinPin || undefined,
             }));
             break;
           }

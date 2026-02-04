@@ -24,7 +24,8 @@ import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useCpuTurns } from '@/hooks/useCpuTurns';
 import { useToast } from '@/hooks/use-toast';
 import { useSound } from '@/hooks/useSoundEffects';
-import { History } from 'lucide-react';
+import { History, BarChart3 } from 'lucide-react';
+import { StatsModal } from './StatsModal';
 import {
   initializeGame,
   dealCards,
@@ -48,6 +49,7 @@ export function GameBoard() {
   const [showDealerDraw, setShowDealerDraw] = useState(false);
   const [showMultiplayerLobby, setShowMultiplayerLobby] = useState(false);
   const [showLastTrick, setShowLastTrick] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [trickWinner, setTrickWinner] = useState<Player | null>(null);
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -550,9 +552,15 @@ export function GameBoard() {
                   Play
                 </Button>
               </div>
-              <Button variant="ghost" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
-                How to Play
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" onClick={() => setRulesOpen(true)} data-testid="button-how-to-play">
+                  How to Play
+                </Button>
+                <Button variant="ghost" onClick={() => setShowStats(true)} data-testid="button-stats">
+                  <BarChart3 className="w-4 h-4 mr-1.5" />
+                  Stats
+                </Button>
+              </div>
             </>
           ) : (
             <MultiplayerLobby
@@ -774,6 +782,7 @@ export function GameBoard() {
         roomCode={multiplayer.roomCode}
       />
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <StatsModal open={showStats} onClose={() => setShowStats(false)} />
       <DealerDrawModal
         open={isMultiplayerMode ? gameState.phase === 'dealer-draw' : showDealerDraw}
         players={gameState.players}
